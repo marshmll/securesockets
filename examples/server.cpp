@@ -2,7 +2,7 @@
 
 int main(void)
 {
-    sck::SecureTCPServer server("cert.pem", "key.pem");
+    sck::SecureTCPServer server("cert/server.crt", "cert/server.key");
 
     if (!server.listen(8000))
     {
@@ -22,7 +22,7 @@ int main(void)
 
     int sent = server.send("Server Hello!", sizeof("Server Hello!"));
 
-    std::cout << "[Server] Sent " << sent << " bytes: Client Hello!" << std::endl;
+    std::cout << "[Server] Sent " << sent << " bytes: Server Hello!" << std::endl;
 
     char buf[4096];
     memset(buf, 0, sizeof(buf));

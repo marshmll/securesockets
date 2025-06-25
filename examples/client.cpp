@@ -1,8 +1,9 @@
 #include "securesockets/SecureTCPClient.hpp"
+#include <iostream>
 
 int main(void)
 {
-    sck::SecureTCPClient client;
+    sck::SecureTCPClient client("cert/ca.crt");
 
     if (!client.connect("127.0.0.1", 8000))
     {
@@ -16,7 +17,7 @@ int main(void)
 
     std::cout << "[Client] Received " << received << " bytes: " << buf << std::endl;
 
-    int sent = client.send("Hello!", sizeof("Client Hello!"));
+    int sent = client.send("Client Hello!", sizeof("Client Hello!"));
 
     std::cout << "[Client] Sent " << sent << " bytes: Client Hello!" << std::endl;
 

@@ -1,53 +1,64 @@
 #ifndef SECURETCPCLIENT_H
 #define SECURETCPCLIENT_H
 
-#include <arpa/inet.h>
-#include <iostream>
-#include <memory>
-#include <netinet/in.h>
-#include <openssl/err.h>
-#include <openssl/ssl.h>
-#include <string>
-#include <sys/socket.h>
-#include <unistd.h>
-
-#include "securesockets/SocketUtils.hpp"
+#include <arpa/inet.h>      // sockaddr_in, inet_pton
+#include <fcntl.h>          // fcntl
+#include <filesystem>       // std::filesystem
+#include <iostream>         // std::cout
+#include <memory>           // std::unique_ptr
+#include <netinet/in.h>     // sockaddr_in, htons
+#include <openssl/err.h>    // ERR_print_errors_fp, ERR_get_error
+#include <openssl/ssl.h>    // SSL, SSL_CTX, SSL_METHOD
+#include <openssl/x509.h>   // X509, X509_NAME
+#include <openssl/x509v3.h> // GENERAL_NAME, NID_subject_alt_name
+#include <stdexcept>        // std::runtime_error
+#include <string>           // std::string
+#include <sys/socket.h>     // socket, connect
+#include <unistd.h>         // close
 
 namespace sck
 {
 constexpr int ANY_PORT = 0;
+constexpr int INVALID_SOCKET = -1;
 
 class SecureTCPClient
 {
   public:
-    SecureTCPClient();
+    SecureTCPClient(const std::filesystem::path &ca_cert_path);
     SecureTCPClient(const SecureTCPClient &) = delete;
     SecureTCPClient &operator=(const SecureTCPClient &) = delete;
+    SecureTCPClient(SecureTCPClient &&) = delete;
+    SecureTCPClient &operator=(SecureTCPClient &&) = delete;
 
     ~SecureTCPClient();
 
-    [[nodiscard]]
-    const bool connect(const std::string &server_addr, const unsigned short int server_port);
+    bool connect(const std::string &server_addr, unsigned short server_port);
 
-    [[nodiscard]]
-    const int send(const char *data, const size_t size);
+    int send(const char *data, size_t size);
 
-    [[nodiscard]]
-    const int recv(char *const buffer, const size_t size);
+    int recv(char *buf, size_t size);
+
+    int getSocketFD() const;
 
   private:
     void nullifyHandles();
+    void initSSL();
+    void initRawSocket();
+    void logConnectionDetails();
+    std::string getOpenSSLError() const;
+    std::string getSSLError(int err_code) const;
+    bool verifyServerCertificate();
+    bool verifyHostname(X509 *cert);
+    bool matchHostname(const std::string &pattern, const std::string &hostname);
+    bool checkCertificateValidity(X509 *cert);
 
+    std::string caCertPath;
     std::string serverAddr;
-    unsigned short int serverPort;
-
-    int err;
+    unsigned short serverPort;
     int sd;
-    sockaddr_in sa;
+
     SSL_CTX *ctx;
     SSL *ssl;
-    X509 *serverCert;
-    char *str;
     const SSL_METHOD *meth;
 };
 } // namespace sck
