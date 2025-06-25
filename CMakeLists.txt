@@ -8,6 +8,8 @@ add_library(securesockets STATIC
     src/securesockets/SecureTCPServer.cpp
 )
 
+target_link_libraries(securesockets PUBLIC crypto ssl)
+
 set_target_properties(securesockets PROPERTIES VERSION ${PROJECT_VERSION})
 set_target_properties(securesockets PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
 
