@@ -1,0 +1,8 @@
+[
+{
+  "directory": "/home/renan/Desktop/securesockets/build",
+  "command": "/usr/bin/clang++  -I/home/renan/Desktop/securesockets/include -g -o CMakeFiles/securesockets.dir/src/main.cpp.o -c /home/renan/Desktop/securesockets/src/main.cpp",
+  "file": "/home/renan/Desktop/securesockets/src/main.cpp",
+  "output": "CMakeFiles/securesockets.dir/src/main.cpp.o"
+}
+]
