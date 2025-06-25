@@ -1,20 +1,19 @@
 #ifndef SECURETCPCLIENT_H
 #define SECURETCPCLIENT_H
 
-#include <arpa/inet.h>      // sockaddr_in, inet_pton
-#include <fcntl.h>          // fcntl
-#include <filesystem>       // std::filesystem
-#include <iostream>         // std::cout
-#include <memory>           // std::unique_ptr
-#include <netinet/in.h>     // sockaddr_in, htons
-#include <openssl/err.h>    // ERR_print_errors_fp, ERR_get_error
-#include <openssl/ssl.h>    // SSL, SSL_CTX, SSL_METHOD
-#include <openssl/x509.h>   // X509, X509_NAME
-#include <openssl/x509v3.h> // GENERAL_NAME, NID_subject_alt_name
-#include <stdexcept>        // std::runtime_error
-#include <string>           // std::string
-#include <sys/socket.h>     // socket, connect
-#include <unistd.h>         // close
+#include <arpa/inet.h>   // sockaddr_in, inet_pton
+#include <fcntl.h>       // fcntl
+#include <filesystem>    // std::filesystem
+#include <iostream>      // std::cout
+#include <memory>        // std::unique_ptr
+#include <netinet/in.h>  // sockaddr_in, htons
+#include <openssl/err.h> // ERR_print_errors_fp, ERR_get_error
+#include <openssl/ssl.h> // SSL, SSL_CTX, SSL_METHOD
+#include <openssl/x509v3.h> // X509, sk_GENERAL_NAME_num, GENERAL_NAME, sk_GENERAL_NAME_value, GEN_DNS, GEN_IPADD, GENERAL_NAME_free
+#include <stdexcept>    // std::runtime_error
+#include <string>       // std::string
+#include <sys/socket.h> // socket, connect
+#include <unistd.h>     // close
 
 namespace sck
 {
