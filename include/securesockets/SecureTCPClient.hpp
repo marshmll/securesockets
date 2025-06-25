@@ -30,10 +30,10 @@ class SecureTCPClient
     const bool connect(const std::string &server_addr, const unsigned short int server_port);
 
     [[nodiscard]]
-    const bool send(const void *data, const size_t size);
+    const int send(const char *data, const size_t size);
 
     [[nodiscard]]
-    const int receive(char *buffer, const size_t size);
+    const int recv(char *const buffer, const size_t size);
 
   private:
     void nullifyHandles();
@@ -50,6 +50,6 @@ class SecureTCPClient
     char *str;
     const SSL_METHOD *meth;
 };
-} // namespace ssck
+} // namespace sck
 
 #endif // SECURETCPCLIENT_H

@@ -56,7 +56,7 @@ const bool SecureTCPClient::connect(const std::string &server_addr, const unsign
 
     /* Get the cipher - opt */
 
-    std::cout << "[ SecureTCPClient ] SSL connection using" << SSL_get_cipher(ssl) << "\n";
+    std::cout << "[ SecureTCPClient ] SSL connection using " << SSL_get_cipher(ssl) << "\n";
 
     /* Get server's certificate (note: beware of dynamic allocation) - opt */
 
@@ -81,22 +81,17 @@ const bool SecureTCPClient::connect(const std::string &server_addr, const unsign
     return true;
 }
 
-const bool SecureTCPClient::send(const void *data, const size_t size)
+const int SecureTCPClient::send(const char *data, const size_t size)
 {
     err = SSL_write(ssl, data, size);
-    CHK_SSL(err, "[ SecureTCPClient ] Failed to connect socket to address " + serverAddr + " port " +
-                     std::to_string(serverPort));
 
-    return true;
+    return err;
 }
 
-const int SecureTCPClient::receive(char *buffer, const size_t size)
+const int SecureTCPClient::recv(char *const buffer, const size_t size)
 {
     err = SSL_read(ssl, buffer, size - 1);
-    CHK_SSL(err, "[ SecureTCPClient ] Failed to receive data.");
-
     buffer[err] = '\0';
-    std::cout << "[ SecureTCPClient ] Got " << err << " chars: " << buffer << "\n";
 
     return err;
 }
