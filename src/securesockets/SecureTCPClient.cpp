@@ -25,7 +25,8 @@ SecureTCPClient::~SecureTCPClient()
     }
 }
 
-bool SecureTCPClient::connect(const std::string &server_addr, unsigned short server_port)
+bool SecureTCPClient::connect(const std::string &server_addr, const unsigned short int server_port,
+                              const long int timeout_seconds)
 {
     // Clean up any existing connection first
     if (ssl)
@@ -45,14 +46,16 @@ bool SecureTCPClient::connect(const std::string &server_addr, unsigned short ser
 
     if (!ctx)
     {
-        throw std::runtime_error("[SecureTCPClient] SSL context is null");
+        std::cerr << "[SecureTCPClient] SSL context is null" << std::endl;
+        return false;
     }
 
     /* Create socket connection */
-    sd = socket(AF_INET, SOCK_STREAM, 0);
+    initRawSocket();
     if (sd < 0)
     {
-        throw std::runtime_error("Failed to create socket: " + std::string(strerror(errno)));
+        std::cerr << "[SecureTCPClient] Failed to create socket" << std::endl;
+        return false;
     }
 
     struct sockaddr_in sa;
@@ -67,38 +70,165 @@ bool SecureTCPClient::connect(const std::string &server_addr, unsigned short ser
         throw std::runtime_error("[SecureTCPClient] Invalid address: " + serverAddr);
     }
 
-    if (::connect(sd, (struct sockaddr *)&sa, sizeof(sa)))
+    // Set the socket to non-blocking mode
+    if (fcntl(sd, F_SETFL, O_NONBLOCK) < 0)
     {
+        std::cerr << "[SecureTCPClient] Failed to set socket to non-blocking mode" << std::endl;
         close(sd);
         sd = -1;
-        throw std::runtime_error("[SecureTCPClient] Failed to connect to " + serverAddr + ":" +
-                                 std::to_string(serverPort) + " - " + strerror(errno));
+        return false;
     }
 
-    /* SSL negotiation */
+    // Attempt connection
+    int connect_result = ::connect(sd, (struct sockaddr *)&sa, sizeof(sa));
+
+    if (connect_result < 0)
+    {
+        if (errno != EINPROGRESS)
+        {
+            close(sd);
+            sd = -1;
+            std::cerr << "[SecureTCPClient] Failed to connect to " + serverAddr + ":" + std::to_string(serverPort) +
+                             " - " + strerror(errno)
+                      << std::endl;
+            return false;
+        }
+
+        // Connection is in progress, wait for it to complete
+        fd_set write_fds, error_fds;
+        FD_ZERO(&write_fds);
+        FD_ZERO(&error_fds);
+        FD_SET(sd, &write_fds);
+        FD_SET(sd, &error_fds);
+
+        struct timeval timeout;
+        timeout.tv_sec = timeout_seconds;
+        timeout.tv_usec = 0;
+
+        int select_result = select(sd + 1, nullptr, &write_fds, &error_fds, &timeout);
+
+        if (select_result <= 0)
+        {
+            close(sd);
+            sd = -1;
+            if (select_result == 0)
+            {
+                std::cerr << "[SecureTCPClient] Connection timeout" << std::endl;
+            }
+            else
+            {
+                std::cerr << "[SecureTCPClient] Select failed: " << strerror(errno) << std::endl;
+            }
+            return false;
+        }
+
+        if (FD_ISSET(sd, &error_fds))
+        {
+            close(sd);
+            sd = -1;
+            std::cerr << "[SecureTCPClient] Connection failed" << std::endl;
+            return false;
+        }
+
+        // Check if connection actually succeeded
+        int error = 0;
+        socklen_t len = sizeof(error);
+        if (getsockopt(sd, SOL_SOCKET, SO_ERROR, &error, &len) < 0 || error != 0)
+        {
+            close(sd);
+            sd = -1;
+            std::cerr << "[SecureTCPClient] Connection failed: " << strerror(error) << std::endl;
+            return false;
+        }
+    }
+
+    // TCP connection is established, socket remains in non-blocking mode
+    // No need to change socket mode - it stays non-blocking
+
+    /* SSL negotiation in non-blocking mode */
     ssl = SSL_new(ctx);
     if (!ssl)
     {
         close(sd);
         sd = -1;
-        throw std::runtime_error("[SecureTCPClient] Failed to create SSL structure: " + getOpenSSLError());
+        std::cerr << "[SecureTCPClient] Failed to create SSL structure: " + getOpenSSLError() << std::endl;
+        return false;
     }
 
     SSL_set_fd(ssl, sd);
 
-    int err = SSL_connect(ssl);
-    if (err <= 0)
+    // Non-blocking SSL handshake with timeout
+    struct timeval ssl_timeout;
+    ssl_timeout.tv_sec = 10; // 10 second timeout for SSL handshake
+    ssl_timeout.tv_usec = 0;
+
+    time_t start_time = time(nullptr);
+    int err;
+    do
     {
-        int ssl_err = SSL_get_error(ssl, err);
-        SSL_free(ssl);
-        ssl = nullptr;
-        close(sd);
-        sd = -1;
-        throw std::runtime_error("[SecureTCPClient] SSL handshake failed: " + getSSLError(ssl_err));
-    }
+        err = SSL_connect(ssl);
+        if (err <= 0)
+        {
+            int ssl_err = SSL_get_error(ssl, err);
+            if (ssl_err == SSL_ERROR_WANT_READ || ssl_err == SSL_ERROR_WANT_WRITE)
+            {
+                // Check for timeout
+                if (time(nullptr) - start_time > 10)
+                {
+                    SSL_free(ssl);
+                    ssl = nullptr;
+                    close(sd);
+                    sd = -1;
+                    std::cerr << "[SecureTCPClient] SSL handshake timeout" << std::endl;
+                    return false;
+                }
+
+                // Wait for socket to be ready and retry
+                fd_set read_fds, write_fds;
+                FD_ZERO(&read_fds);
+                FD_ZERO(&write_fds);
+
+                if (ssl_err == SSL_ERROR_WANT_READ)
+                {
+                    FD_SET(sd, &read_fds);
+                }
+                else // SSL_ERROR_WANT_WRITE
+                {
+                    FD_SET(sd, &write_fds);
+                }
+
+                struct timeval select_timeout;
+                select_timeout.tv_sec = 1; // 1 second select timeout
+                select_timeout.tv_usec = 0;
+
+                int select_result = select(sd + 1, &read_fds, &write_fds, nullptr, &select_timeout);
+                if (select_result < 0)
+                {
+                    SSL_free(ssl);
+                    ssl = nullptr;
+                    close(sd);
+                    sd = -1;
+                    std::cerr << "[SecureTCPClient] Select failed during SSL handshake: " << strerror(errno)
+                              << std::endl;
+                    return false;
+                }
+                // Continue the loop to retry SSL_connect
+                continue;
+            }
+            else
+            {
+                // Real SSL error
+                SSL_free(ssl);
+                ssl = nullptr;
+                close(sd);
+                sd = -1;
+                std::cerr << "[SecureTCPClient] SSL handshake failed: " + getSSLError(ssl_err) << std::endl;
+                return false;
+            }
+        }
+    } while (err <= 0);
 
     logConnectionDetails();
-
     return true;
 }
 
@@ -106,22 +236,205 @@ int SecureTCPClient::send(const char *data, size_t size)
 {
     if (!ssl)
     {
-        throw std::runtime_error("[SecureTCPClient] Not connected");
+        std::cerr << "[SecureTCPClient] Not connected" << std::endl;
+        return -1;
     }
 
-    int sent = SSL_write(ssl, data, size);
-    if (sent <= 0)
+    if (size == 0)
     {
-        throw std::runtime_error("[SecureTCPClient] Send failed: " + getSSLError(SSL_get_error(ssl, sent)));
+        return 0;
     }
-    return sent;
+
+    time_t start_time = time(nullptr);
+    const int timeout_seconds = 10; // 10 second timeout
+
+    int sent;
+    do
+    {
+        sent = SSL_write(ssl, data, size);
+        if (sent > 0)
+        {
+            // Success
+            return sent;
+        }
+
+        int ssl_err = SSL_get_error(ssl, sent);
+        if (ssl_err == SSL_ERROR_WANT_READ || ssl_err == SSL_ERROR_WANT_WRITE)
+        {
+            // Check for timeout
+            if (time(nullptr) - start_time > timeout_seconds)
+            {
+                std::cerr << "[SecureTCPClient] Send timeout" << std::endl;
+                return -1;
+            }
+
+            // Wait for socket to be ready
+            fd_set read_fds, write_fds;
+            FD_ZERO(&read_fds);
+            FD_ZERO(&write_fds);
+
+            if (ssl_err == SSL_ERROR_WANT_READ)
+            {
+                FD_SET(sd, &read_fds);
+            }
+            else // SSL_ERROR_WANT_WRITE
+            {
+                FD_SET(sd, &write_fds);
+            }
+
+            struct timeval select_timeout;
+            select_timeout.tv_sec = 1; // 1 second select timeout
+            select_timeout.tv_usec = 0;
+
+            int select_result = select(sd + 1, &read_fds, &write_fds, nullptr, &select_timeout);
+            if (select_result < 0)
+            {
+                std::cerr << "[SecureTCPClient] Select failed during send: " << strerror(errno) << std::endl;
+                return -1;
+            }
+            // Continue the loop to retry SSL_write
+            continue;
+        }
+        else if (ssl_err == SSL_ERROR_ZERO_RETURN)
+        {
+            // Connection closed cleanly
+            std::cerr << "[SecureTCPClient] Connection closed by peer during send" << std::endl;
+            return 0;
+        }
+        else
+        {
+            // Real error
+            std::cerr << "[SecureTCPClient] Send failed: " + getSSLError(ssl_err) << std::endl;
+            return -1;
+        }
+    } while (true);
 }
 
-int SecureTCPClient::recv(char *buf, size_t size)
+int SecureTCPClient::recv(char *buf, const size_t size)
 {
     if (!ssl)
     {
-        throw std::runtime_error("[SecureTCPClient] Not connected");
+        std::cerr << "[SecureTCPClient] Not connected" << std::endl;
+        return -1;
+    }
+
+    if (size == 0)
+    {
+        return 0;
+    }
+
+    time_t start_time = time(nullptr);
+    const int timeout_seconds = 10; // 10 second timeout
+
+    int received;
+    do
+    {
+        received = SSL_read(ssl, buf, size - 1); // Leave space for null terminator
+        if (received > 0)
+        {
+            // Success
+            buf[received] = '\0'; // Null terminate
+            return received;
+        }
+
+        int ssl_err = SSL_get_error(ssl, received);
+        if (ssl_err == SSL_ERROR_WANT_READ || ssl_err == SSL_ERROR_WANT_WRITE)
+        {
+            // Check for timeout
+            if (time(nullptr) - start_time > timeout_seconds)
+            {
+                std::cerr << "[SecureTCPClient] Receive timeout" << std::endl;
+                return -1;
+            }
+
+            // Wait for socket to be ready
+            fd_set read_fds, write_fds;
+            FD_ZERO(&read_fds);
+            FD_ZERO(&write_fds);
+
+            if (ssl_err == SSL_ERROR_WANT_READ)
+            {
+                FD_SET(sd, &read_fds);
+            }
+            else // SSL_ERROR_WANT_WRITE
+            {
+                FD_SET(sd, &write_fds);
+            }
+
+            struct timeval select_timeout;
+            select_timeout.tv_sec = 1; // 1 second select timeout
+            select_timeout.tv_usec = 0;
+
+            int select_result = select(sd + 1, &read_fds, &write_fds, nullptr, &select_timeout);
+            if (select_result < 0)
+            {
+                std::cerr << "[SecureTCPClient] Select failed during recv: " << strerror(errno) << std::endl;
+                return -1;
+            }
+            // Continue the loop to retry SSL_read
+            continue;
+        }
+        else if (ssl_err == SSL_ERROR_ZERO_RETURN)
+        {
+            // Connection closed cleanly
+            return 0; // EOF
+        }
+        else
+        {
+            // Real error
+            std::cerr << "[SecureTCPClient] Receive failed: " + getSSLError(ssl_err) << std::endl;
+            return -1;
+        }
+    } while (true);
+}
+
+int SecureTCPClient::sendNonBlocking(const char *data, const size_t size)
+{
+    if (!ssl)
+    {
+        std::cerr << "[SecureTCPClient] Not connected" << std::endl;
+        return -1;
+    }
+
+    if (size == 0)
+    {
+        return 0;
+    }
+
+    int sent = SSL_write(ssl, data, size);
+    if (sent > 0)
+    {
+        return sent;
+    }
+
+    int ssl_err = SSL_get_error(ssl, sent);
+    if (ssl_err == SSL_ERROR_WANT_READ)
+    {
+        errno = EAGAIN; // Indicate would block, need to wait for read
+        return -2;      // Special return code meaning "would block on read"
+    }
+    else if (ssl_err == SSL_ERROR_WANT_WRITE)
+    {
+        errno = EAGAIN; // Indicate would block, need to wait for write
+        return -3;      // Special return code meaning "would block on write"
+    }
+    else if (ssl_err == SSL_ERROR_ZERO_RETURN)
+    {
+        return 0; // Connection closed
+    }
+    else
+    {
+        std::cerr << "[SecureTCPClient] Send failed: " + getSSLError(ssl_err) << std::endl;
+        return -1; // Real error
+    }
+}
+
+int SecureTCPClient::recvNonBlocking(char *buf, const size_t size)
+{
+    if (!ssl)
+    {
+        std::cerr << "[SecureTCPClient] Not connected" << std::endl;
+        return -1;
     }
 
     if (size == 0)
@@ -130,13 +443,32 @@ int SecureTCPClient::recv(char *buf, size_t size)
     }
 
     int received = SSL_read(ssl, buf, size - 1);
-    if (received <= 0)
+    if (received > 0)
     {
-        throw std::runtime_error("[SecureTCPClient] Receive failed: " + getSSLError(SSL_get_error(ssl, received)));
+        buf[received] = '\0';
+        return received;
     }
 
-    buf[received] = '\0';
-    return received;
+    int ssl_err = SSL_get_error(ssl, received);
+    if (ssl_err == SSL_ERROR_WANT_READ)
+    {
+        errno = EAGAIN; // Indicate would block, need to wait for read
+        return -2;      // Special return code meaning "would block on read"
+    }
+    else if (ssl_err == SSL_ERROR_WANT_WRITE)
+    {
+        errno = EAGAIN; // Indicate would block, need to wait for write
+        return -3;      // Special return code meaning "would block on write"
+    }
+    else if (ssl_err == SSL_ERROR_ZERO_RETURN)
+    {
+        return 0; // Connection closed (EOF)
+    }
+    else
+    {
+        std::cerr << "[SecureTCPClient] Receive failed: " + getSSLError(ssl_err) << std::endl;
+        return -1; // Real error
+    }
 }
 
 int SecureTCPClient::getSocketFD() const
@@ -167,10 +499,6 @@ void SecureTCPClient::initSSL()
 void SecureTCPClient::initRawSocket()
 {
     sd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sd < 0)
-    {
-        throw std::runtime_error("Failed to create socket: " + std::string(strerror(errno)));
-    }
 }
 
 void SecureTCPClient::logConnectionDetails()

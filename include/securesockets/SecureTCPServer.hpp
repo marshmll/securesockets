@@ -3,6 +3,7 @@
 
 #include <arpa/inet.h>   // sockaddr_in, inet_ntop
 #include <cstring>       // strerror, memset
+#include <fcntl.h>       // fcntl, F_SETFL, O_NONBLOCK
 #include <filesystem>    // std::filesystem::path
 #include <iostream>      // std::cout
 #include <netinet/in.h>  // sockaddr_in, INADDR_ANY
@@ -26,10 +27,11 @@ class SecureTCPServer
     ~SecureTCPServer();
 
     bool listen(unsigned short port, unsigned int queue_size = 5);
-    bool accept();
+    bool accept(const long int timeout_seconds = 10);
     int recv(char *buf, size_t size);
     int send(const char *data, size_t size);
-    bool isListening() const;
+    int sendNonBlocking(const char *data, const size_t size);
+    int recvNonBlocking(char *buf, const size_t size);
     int getSocketFD() const;
 
   private:

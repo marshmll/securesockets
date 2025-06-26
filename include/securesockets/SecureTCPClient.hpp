@@ -31,12 +31,12 @@ class SecureTCPClient
 
     ~SecureTCPClient();
 
-    bool connect(const std::string &server_addr, unsigned short server_port);
-
-    int send(const char *data, size_t size);
-
-    int recv(char *buf, size_t size);
-
+    bool connect(const std::string &server_addr, const unsigned short int server_port,
+                 const long int timeout_seconds = 10);
+    int send(const char *data, const size_t size);
+    int recv(char *buf, const size_t size);
+    int sendNonBlocking(const char *data, const size_t size);
+    int recvNonBlocking(char *buf, const size_t size);
     int getSocketFD() const;
 
   private:
@@ -55,7 +55,6 @@ class SecureTCPClient
     std::string serverAddr;
     unsigned short serverPort;
     int sd;
-
     SSL_CTX *ctx;
     SSL *ssl;
     const SSL_METHOD *meth;

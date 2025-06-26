@@ -42,30 +42,35 @@ bool SecureTCPServer::listen(unsigned short port, unsigned int queue_size)
 {
     if (listenSd >= 0)
     {
-        throw std::runtime_error("[SecureTCPServer] Server is already listening");
+        std::cerr << "[SecureTCPServer] Server is already listening" << std::endl;
+        return false;
     }
 
     // Load certificate and private key
     if (SSL_CTX_use_certificate_file(ctx, certPath.c_str(), SSL_FILETYPE_PEM) <= 0)
     {
-        throw std::runtime_error("[SecureTCPServer] Failed to load certificate: " + getOpenSSLError());
+        std::cerr << "[SecureTCPServer] Failed to load certificate: " << getOpenSSLError() << std::endl;
+        return false;
     }
 
     if (SSL_CTX_use_PrivateKey_file(ctx, privKeyPath.c_str(), SSL_FILETYPE_PEM) <= 0)
     {
-        throw std::runtime_error("[SecureTCPServer] Failed to load private key: " + getOpenSSLError());
+        std::cerr << "[SecureTCPServer] Failed to load private key: " << getOpenSSLError() << std::endl;
+        return false;
     }
 
     if (!SSL_CTX_check_private_key(ctx))
     {
-        throw std::runtime_error("[SecureTCPServer] Private key doesn't match certificate");
+        std::cerr << "[SecureTCPServer] Private key doesn't match certificate" << std::endl;
+        return false;
     }
 
     // Create and bind socket
     listenSd = socket(AF_INET, SOCK_STREAM, 0);
     if (listenSd < 0)
     {
-        throw std::runtime_error("[SecureTCPServer] Failed to create socket: " + std::string(strerror(errno)));
+        std::cerr << "[SecureTCPServer] Failed to create socket: " << std::string(strerror(errno)) << std::endl;
+        return false;
     }
 
     // Set SO_REUSEADDR
@@ -78,28 +83,39 @@ bool SecureTCPServer::listen(unsigned short port, unsigned int queue_size)
     saServer.sin_addr.s_addr = INADDR_ANY;
     saServer.sin_port = htons(port);
 
-    if (bind(listenSd, (struct sockaddr *)&saServer, sizeof(saServer)))
+    if (bind(listenSd, (struct sockaddr *)&saServer, sizeof(saServer)) < 0)
     {
         close(listenSd);
         listenSd = -1;
-        throw std::runtime_error("[SecureTCPServer] Failed to bind socket: " + std::string(strerror(errno)));
+        std::cerr << "[SecureTCPServer] Failed to bind socket: " << std::string(strerror(errno)) << std::endl;
+        return false;
     }
 
-    if (::listen(listenSd, queue_size))
+    if (fcntl(listenSd, F_SETFL, O_NONBLOCK) < 0)
+    {
+        close(listenSd);
+        std::cerr << "[SecureTCPServer] Failed to set socket mode to non-blocking" << std::string(strerror(errno))
+                  << std::endl;
+        return false;
+    }
+
+    if (::listen(listenSd, queue_size) < 0)
     {
         close(listenSd);
         listenSd = -1;
-        throw std::runtime_error("[SecureTCPServer] Failed to listen: " + std::string(strerror(errno)));
+        std::cerr << "[SecureTCPServer] Failed to listen: " << std::string(strerror(errno)) << std::endl;
+        return false;
     }
 
     return true;
 }
 
-bool SecureTCPServer::accept()
+bool SecureTCPServer::accept(const long int timeout_seconds)
 {
     if (listenSd < 0)
     {
-        throw std::runtime_error("[SecureTCPServer] Server is not listening");
+        std::cerr << "[SecureTCPServer] Server is not listening" << std::endl;
+        return false;
     }
 
     struct sockaddr_in saClient;
@@ -118,83 +134,376 @@ bool SecureTCPServer::accept()
         sd = -1;
     }
 
-    sd = ::accept(listenSd, (struct sockaddr *)&saClient, &clientLen);
-    if (sd < 0)
+    // Set the listening socket to non-blocking mode for accept with timeout
+    int flags = fcntl(listenSd, F_GETFL, 0);
+    if (flags < 0)
     {
-        throw std::runtime_error("[SecureTCPServer] Failed to accept connection: " + std::string(strerror(errno)));
+        std::cerr << "[SecureTCPServer] Failed to get socket flags: " << strerror(errno) << std::endl;
+        return false;
+    }
+    if (fcntl(listenSd, F_SETFL, flags | O_NONBLOCK) < 0)
+    {
+        std::cerr << "[SecureTCPServer] Failed to set socket to non-blocking mode: " << strerror(errno) << std::endl;
+        return false;
+    }
+
+    // Accept new connection with timeout
+    time_t start_time = time(nullptr);
+    do
+    {
+        sd = ::accept(listenSd, (struct sockaddr *)&saClient, &clientLen);
+
+        if (sd < 0)
+        {
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+            {
+                // No connection available yet, wait with select
+                fd_set read_fds;
+                FD_ZERO(&read_fds);
+                FD_SET(listenSd, &read_fds);
+
+                struct timeval timeout;
+                timeout.tv_sec = 1; // Check every second
+                timeout.tv_usec = 0;
+
+                int select_result = select(listenSd + 1, &read_fds, nullptr, nullptr, &timeout);
+                if (select_result < 0)
+                {
+                    std::cerr << "[SecureTCPServer] Select failed: " << strerror(errno) << std::endl;
+                    return false;
+                }
+                else if (select_result == 0)
+                {
+                    // Timeout, check if we've exceeded our total timeout
+                    if (time(nullptr) - start_time > timeout_seconds)
+                    {
+                        std::cerr << "[SecureTCPServer] Accept timeout" << std::endl;
+                        return false;
+                    }
+                    continue;
+                }
+                // Socket is ready, try accept again
+                continue;
+            }
+            else
+            {
+                // Real accept error
+                std::cerr << "[SecureTCPServer] Failed to accept connection: " << strerror(errno) << std::endl;
+                return false;
+            }
+        }
+    } while (sd < 0);
+
+    // Restore blocking mode for the accepted socket
+    if (fcntl(sd, F_SETFL, flags & ~O_NONBLOCK) < 0)
+    {
+        std::cerr << "[SecureTCPServer] Failed to set socket to blocking mode: " << strerror(errno) << std::endl;
+        close(sd);
+        sd = -1;
+        return false;
     }
 
     // Log connection info
     char clientIP[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &saClient.sin_addr, clientIP, INET_ADDRSTRLEN);
-    std::cout << "[SecureTCPServer] Connection from " << clientIP << " port " << ntohs(saClient.sin_port) << "\n";
+    std::cout << "[SecureTCPServer] Connection from " << clientIP << " port " << ntohs(saClient.sin_port) << std::endl;
 
-    // SSL negotiation
+    // SSL negotiation with timeout
     ssl = SSL_new(ctx);
     if (!ssl)
     {
+        std::cerr << "[SecureTCPServer] Failed to create SSL structure: " << getOpenSSLError() << std::endl;
         close(sd);
         sd = -1;
-        throw std::runtime_error("[SecureTCPServer] Failed to create SSL structure: " + getOpenSSLError());
+        return false;
     }
 
     SSL_set_fd(ssl, sd);
 
-    int err = SSL_accept(ssl);
-    if (err <= 0)
+    time_t ssl_start_time = time(nullptr);
+    int err;
+    do
     {
-        int ssl_err = SSL_get_error(ssl, err);
-        SSL_free(ssl);
-        ssl = nullptr;
-        close(sd);
-        sd = -1;
-        throw std::runtime_error("[SecureTCPServer] SSL handshake failed: " + getSSLError(ssl_err));
-    }
+        err = SSL_accept(ssl);
+        if (err <= 0)
+        {
+            int ssl_err = SSL_get_error(ssl, err);
+            if (ssl_err == SSL_ERROR_WANT_READ || ssl_err == SSL_ERROR_WANT_WRITE)
+            {
+                // Check for timeout
+                if (time(nullptr) - ssl_start_time > timeout_seconds)
+                {
+                    SSL_free(ssl);
+                    ssl = nullptr;
+                    close(sd);
+                    sd = -1;
+                    std::cerr << "[SecureTCPServer] SSL handshake timeout" << std::endl;
+                    return false;
+                }
+
+                // Wait for socket to be ready
+                fd_set read_fds, write_fds;
+                FD_ZERO(&read_fds);
+                FD_ZERO(&write_fds);
+
+                if (ssl_err == SSL_ERROR_WANT_READ)
+                {
+                    FD_SET(sd, &read_fds);
+                }
+                else // SSL_ERROR_WANT_WRITE
+                {
+                    FD_SET(sd, &write_fds);
+                }
+
+                struct timeval select_timeout;
+                select_timeout.tv_sec = 1; // 1 second select timeout
+                select_timeout.tv_usec = 0;
+
+                int select_result = select(sd + 1, &read_fds, &write_fds, nullptr, &select_timeout);
+                if (select_result < 0)
+                {
+                    SSL_free(ssl);
+                    ssl = nullptr;
+                    close(sd);
+                    sd = -1;
+                    std::cerr << "[SecureTCPServer] Select failed during SSL handshake: " << strerror(errno)
+                              << std::endl;
+                    return false;
+                }
+                continue;
+            }
+            else
+            {
+                // Real SSL error
+                SSL_free(ssl);
+                ssl = nullptr;
+                close(sd);
+                sd = -1;
+                std::cerr << "[SecureTCPServer] SSL handshake failed: " << getSSLError(ssl_err) << std::endl;
+                return false;
+            }
+        }
+    } while (err <= 0);
 
     logConnectionDetails();
     return true;
-}
-
-int SecureTCPServer::recv(char *buf, size_t size)
-{
-    if (!ssl)
-    {
-        throw std::runtime_error("[SecureTCPServer] Not connected");
-    }
-
-    if (size == 0)
-    {
-        return 0;
-    }
-
-    int received = SSL_read(ssl, buf, size - 1);
-    if (received <= 0)
-    {
-        throw std::runtime_error("[SecureTCPServer] Receive failed: " + getSSLError(SSL_get_error(ssl, received)));
-    }
-
-    buf[received] = '\0';
-    return received;
 }
 
 int SecureTCPServer::send(const char *data, size_t size)
 {
     if (!ssl)
     {
-        throw std::runtime_error("[SecureTCPServer] Not connected");
+        std::cerr << "[SecureTCPServer] Not connected" << std::endl;
+        return -1;
     }
-
-    int sent = SSL_write(ssl, data, size);
-    if (sent <= 0)
+    if (size == 0)
     {
-        throw std::runtime_error("[SecureTCPServer] Send failed: " + getSSLError(SSL_get_error(ssl, sent)));
+        return 0;
     }
-    return sent;
+    time_t start_time = time(nullptr);
+    const int timeout_seconds = 10; // 10 second timeout
+    int sent;
+    do
+    {
+        sent = SSL_write(ssl, data, size);
+        if (sent > 0)
+        {
+            // Success
+            return sent;
+        }
+        int ssl_err = SSL_get_error(ssl, sent);
+        if (ssl_err == SSL_ERROR_WANT_READ || ssl_err == SSL_ERROR_WANT_WRITE)
+        {
+            // Check for timeout
+            if (time(nullptr) - start_time > timeout_seconds)
+            {
+                std::cerr << "[SecureTCPServer] Send timeout" << std::endl;
+                return -1;
+            }
+            // Wait for socket to be ready
+            fd_set read_fds, write_fds;
+            FD_ZERO(&read_fds);
+            FD_ZERO(&write_fds);
+            if (ssl_err == SSL_ERROR_WANT_READ)
+            {
+                FD_SET(sd, &read_fds);
+            }
+            else // SSL_ERROR_WANT_WRITE
+            {
+                FD_SET(sd, &write_fds);
+            }
+            struct timeval select_timeout;
+            select_timeout.tv_sec = 1; // 1 second select timeout
+            select_timeout.tv_usec = 0;
+            int select_result = select(sd + 1, &read_fds, &write_fds, nullptr, &select_timeout);
+            if (select_result < 0)
+            {
+                std::cerr << "[SecureTCPServer] Select failed during send: " << strerror(errno) << std::endl;
+                return -1;
+            }
+            // Continue the loop to retry SSL_write
+            continue;
+        }
+        else if (ssl_err == SSL_ERROR_ZERO_RETURN)
+        {
+            // Connection closed cleanly
+            std::cerr << "[SecureTCPServer] Connection closed by peer during send" << std::endl;
+            return 0;
+        }
+        else
+        {
+            // Real error
+            std::cerr << "[SecureTCPServer] Send failed: " + getSSLError(ssl_err) << std::endl;
+            return -1;
+        }
+    } while (true);
 }
 
-bool SecureTCPServer::isListening() const
+int SecureTCPServer::recv(char *buf, size_t size)
 {
-    return (listenSd >= 0) && (ctx != nullptr);
+    if (!ssl)
+    {
+        std::cerr << "[SecureTCPServer] Not connected" << std::endl;
+        return -1;
+    }
+    if (size == 0)
+    {
+        return 0;
+    }
+    time_t start_time = time(nullptr);
+    const int timeout_seconds = 10; // 10 second timeout
+    int received;
+    do
+    {
+        received = SSL_read(ssl, buf, size - 1); // Leave space for null terminator
+        if (received > 0)
+        {
+            // Success
+            buf[received] = '\0'; // Null terminate
+            return received;
+        }
+        int ssl_err = SSL_get_error(ssl, received);
+        if (ssl_err == SSL_ERROR_WANT_READ || ssl_err == SSL_ERROR_WANT_WRITE)
+        {
+            // Check for timeout
+            if (time(nullptr) - start_time > timeout_seconds)
+            {
+                std::cerr << "[SecureTCPServer] Receive timeout" << std::endl;
+                return -1;
+            }
+            // Wait for socket to be ready
+            fd_set read_fds, write_fds;
+            FD_ZERO(&read_fds);
+            FD_ZERO(&write_fds);
+            if (ssl_err == SSL_ERROR_WANT_READ)
+            {
+                FD_SET(sd, &read_fds);
+            }
+            else // SSL_ERROR_WANT_WRITE
+            {
+                FD_SET(sd, &write_fds);
+            }
+            struct timeval select_timeout;
+            select_timeout.tv_sec = 1; // 1 second select timeout
+            select_timeout.tv_usec = 0;
+            int select_result = select(sd + 1, &read_fds, &write_fds, nullptr, &select_timeout);
+            if (select_result < 0)
+            {
+                std::cerr << "[SecureTCPServer] Select failed during recv: " << strerror(errno) << std::endl;
+                return -1;
+            }
+            // Continue the loop to retry SSL_read
+            continue;
+        }
+        else if (ssl_err == SSL_ERROR_ZERO_RETURN)
+        {
+            // Connection closed cleanly
+            return 0; // EOF
+        }
+        else
+        {
+            // Real error
+            std::cerr << "[SecureTCPServer] Receive failed: " + getSSLError(ssl_err) << std::endl;
+            return -1;
+        }
+    } while (true);
+}
+
+int SecureTCPServer::sendNonBlocking(const char *data, const size_t size)
+{
+    if (!ssl)
+    {
+        std::cerr << "[SecureTCPServer] Not connected" << std::endl;
+        return -1;
+    }
+    if (size == 0)
+    {
+        return 0;
+    }
+    int sent = SSL_write(ssl, data, size);
+    if (sent > 0)
+    {
+        return sent;
+    }
+    int ssl_err = SSL_get_error(ssl, sent);
+    if (ssl_err == SSL_ERROR_WANT_READ)
+    {
+        errno = EAGAIN; // Indicate would block, need to wait for read
+        return -2;      // Special return code meaning "would block on read"
+    }
+    else if (ssl_err == SSL_ERROR_WANT_WRITE)
+    {
+        errno = EAGAIN; // Indicate would block, need to wait for write
+        return -3;      // Special return code meaning "would block on write"
+    }
+    else if (ssl_err == SSL_ERROR_ZERO_RETURN)
+    {
+        return 0; // Connection closed
+    }
+    else
+    {
+        std::cerr << "[SecureTCPServer] Send failed: " + getSSLError(ssl_err) << std::endl;
+        return -1; // Real error
+    }
+}
+
+int SecureTCPServer::recvNonBlocking(char *buf, const size_t size)
+{
+    if (!ssl)
+    {
+        std::cerr << "[SecureTCPServer] Not connected" << std::endl;
+        return -1;
+    }
+    if (size == 0)
+    {
+        return 0;
+    }
+    int received = SSL_read(ssl, buf, size - 1);
+    if (received > 0)
+    {
+        buf[received] = '\0';
+        return received;
+    }
+    int ssl_err = SSL_get_error(ssl, received);
+    if (ssl_err == SSL_ERROR_WANT_READ)
+    {
+        errno = EAGAIN; // Indicate would block, need to wait for read
+        return -2;      // Special return code meaning "would block on read"
+    }
+    else if (ssl_err == SSL_ERROR_WANT_WRITE)
+    {
+        errno = EAGAIN; // Indicate would block, need to wait for write
+        return -3;      // Special return code meaning "would block on write"
+    }
+    else if (ssl_err == SSL_ERROR_ZERO_RETURN)
+    {
+        return 0; // Connection closed (EOF)
+    }
+    else
+    {
+        std::cerr << "[SecureTCPServer] Receive failed: " + getSSLError(ssl_err) << std::endl;
+        return -1; // Real error
+    }
 }
 
 int SecureTCPServer::getSocketFD() const

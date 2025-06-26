@@ -12,12 +12,6 @@
   "output": "CMakeFiles/securesockets.dir/src/securesockets/SecureTCPServer.cpp.o"
 },
 {
-  "directory": "/home/renan/Desktop/securesockets/build",
-  "command": "/usr/bin/clang++  -I/home/renan/Desktop/securesockets/include -isystem /home/renan/Desktop/securesockets/build/_deps/googletest-src/googletest/include -isystem /home/renan/Desktop/securesockets/build/_deps/googletest-src/googletest -g -std=gnu++17 -o CMakeFiles/TCPTest.dir/test/TCPTest.cpp.o -c /home/renan/Desktop/securesockets/test/TCPTest.cpp",
-  "file": "/home/renan/Desktop/securesockets/test/TCPTest.cpp",
-  "output": "CMakeFiles/TCPTest.dir/test/TCPTest.cpp.o"
-},
-{
   "directory": "/home/renan/Desktop/securesockets/build/_deps/googletest-build/googlemock",
   "command": "/usr/bin/clang++  -I/home/renan/Desktop/securesockets/build/_deps/googletest-src/googlemock/include -I/home/renan/Desktop/securesockets/build/_deps/googletest-src/googlemock -isystem /home/renan/Desktop/securesockets/build/_deps/googletest-src/googletest/include -isystem /home/renan/Desktop/securesockets/build/_deps/googletest-src/googletest -g -std=c++17 -Wall -Wshadow -Wconversion -DGTEST_HAS_PTHREAD=1 -fexceptions -W -Wpointer-arith -Wreturn-type -Wcast-qual -Wwrite-strings -Wswitch -Wunused-parameter -Wcast-align -Wchar-subscripts -Winline -Wredundant-decls -o CMakeFiles/gmock.dir/src/gmock-all.cc.o -c /home/renan/Desktop/securesockets/build/_deps/googletest-src/googlemock/src/gmock-all.cc",
   "file": "/home/renan/Desktop/securesockets/build/_deps/googletest-src/googlemock/src/gmock-all.cc",
