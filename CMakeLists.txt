@@ -13,6 +13,7 @@ find_package(OpenSSL REQUIRED)
 add_library(securesockets STATIC
     src/securesockets/SecureTCPClient.cpp
     src/securesockets/SecureTCPServer.cpp
+    src/securesockets/TCPSocket.cpp
 ) 
 
 target_link_libraries(securesockets PRIVATE OpenSSL::SSL OpenSSL::Crypto)

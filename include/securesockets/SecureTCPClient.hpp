@@ -32,7 +32,7 @@ class SecureTCPClient
     ~SecureTCPClient();
 
     bool connect(const std::string &server_addr, const unsigned short int server_port,
-                 const long int timeout_seconds = 10);
+                 const long int timeout_seconds = -1);
     int send(const char *data, const size_t size);
     int recv(char *buf, const size_t size);
     int sendNonBlocking(const char *data, const size_t size);

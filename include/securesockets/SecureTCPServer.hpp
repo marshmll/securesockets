@@ -15,8 +15,6 @@
 #include <sys/socket.h> // socket, bind, listen
 #include <unistd.h>     // close
 
-#define NO_TIMEOUT -1
-
 namespace sck
 {
 
@@ -29,7 +27,7 @@ class SecureTCPServer
     ~SecureTCPServer();
 
     bool listen(unsigned short port, unsigned int queue_size = 5);
-    bool accept(const long int timeout_seconds = NO_TIMEOUT);
+    bool accept(const long int timeout_seconds = -1);
     int recv(char *buf, size_t size);
     int send(const char *data, size_t size);
     int sendNonBlocking(const char *data, const size_t size);
