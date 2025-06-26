@@ -7,7 +7,12 @@ using namespace std::chrono_literals;
 void serverThread()
 {
     sck::TCPSocket socket;
-    socket.init();
+
+    if (!socket.good())
+    {
+        std::cerr << "Server socket failed to create: " << sck::TCPSocket::getErrorMsg() << std::endl;
+        exit(1);
+    }
 
     if (socket.bind(8000) == -1)
     {
@@ -49,7 +54,12 @@ void serverThread()
 void clientThread()
 {
     sck::TCPSocket socket;
-    socket.init();
+
+    if (!socket.good())
+    {
+        std::cerr << "Client socket failed to create: " << sck::TCPSocket::getErrorMsg() << std::endl;
+        exit(1);
+    }
 
     if (socket.connect("127.0.0.1", 8000) == -1)
     {

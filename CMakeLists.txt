@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(securesockets VERSION 0.0.1 LANGUAGES CXX)
+project(sockets VERSION 0.0.1 LANGUAGES CXX)
 
 # GoogleTest requires at least C++17
 set(CMAKE_CXX_STANDARD 17)
@@ -10,15 +10,15 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(OpenSSL REQUIRED)
 
 # Create the library
-add_library(securesockets STATIC
-    src/securesockets/SecureTCPClient.cpp
-    src/securesockets/SecureTCPServer.cpp
-    src/securesockets/TCPSocket.cpp
+add_library(sockets STATIC
+    src/sockets/Socket.cpp
+    src/sockets/TCPSocket.cpp
+    src/sockets/UDPSocket.cpp
 ) 
 
-target_link_libraries(securesockets PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+target_link_libraries(sockets PRIVATE OpenSSL::SSL OpenSSL::Crypto)
 
-target_include_directories(securesockets 
+target_include_directories(sockets 
     PRIVATE 
         include
         src
@@ -27,7 +27,7 @@ target_include_directories(securesockets
         $<INSTALL_INTERFACE:include>
 )
 
-set_target_properties(securesockets PROPERTIES 
+set_target_properties(sockets PROPERTIES 
     VERSION ${PROJECT_VERSION}
     SOVERSION ${PROJECT_VERSION_MAJOR}
 )
@@ -35,18 +35,18 @@ set_target_properties(securesockets PROPERTIES
 # Installation configuration
 include(GNUInstallDirs)
 
-install(TARGETS securesockets
+install(TARGETS sockets
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/securesockets
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/sockets
 )
 
-install(DIRECTORY include/securesockets
+install(DIRECTORY include/sockets
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
 # Generate and install pkg-config file
-configure_file(securesockets.pc.in securesockets.pc @ONLY)
-install(FILES ${CMAKE_BINARY_DIR}/securesockets.pc 
+configure_file(sockets.pc.in sockets.pc @ONLY)
+install(FILES ${CMAKE_BINARY_DIR}/sockets.pc 
     DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/pkgconfig
 )
