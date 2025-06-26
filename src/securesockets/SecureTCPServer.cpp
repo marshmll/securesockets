@@ -174,12 +174,19 @@ bool SecureTCPServer::accept(const long int timeout_seconds)
                 }
                 else if (select_result == 0)
                 {
+                    // If timeout is negative, act as blocking socket.
+                    if (timeout_seconds < 0)
+                    {
+                        continue;
+                    }
+
                     // Timeout, check if we've exceeded our total timeout
-                    if (time(nullptr) - start_time > timeout_seconds)
+                    else if (time(nullptr) - start_time > timeout_seconds)
                     {
                         std::cerr << "[SecureTCPServer] Accept timeout" << std::endl;
                         return false;
                     }
+
                     continue;
                 }
                 // Socket is ready, try accept again

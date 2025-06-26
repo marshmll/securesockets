@@ -4,7 +4,9 @@
 
 int main(void)
 {
-    sck::SecureTCPClient client("cert/ca.crt");
+    // Add trusted certificate file here. This certificate is an example.
+    // The server's certificate is signed by this example CA.
+    sck::SecureTCPClient client("/etc/ssl/certs/ca-certificates.crt");
 
     if (!client.connect("127.0.0.1", 8000))
     {

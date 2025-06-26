@@ -32,7 +32,7 @@ int main(void)
 
     while (running)
     {
-        if (server.accept())
+        if (server.accept(NO_TIMEOUT))
         {
             std::cout << "[Server] Connection accepted" << std::endl;
 
