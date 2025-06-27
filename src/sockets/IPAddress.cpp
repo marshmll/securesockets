@@ -28,7 +28,7 @@ IPAddress::IPAddress(const uint32_t address)
 {
     initVariables();
 
-    internetAddress.s_addr = htonl(address);
+    internetAddress.s_addr = address;
 
     if (address > 0)
     {
@@ -135,6 +135,7 @@ void IPAddress::initVariables()
 {
     memset(&internetAddress, 0, sizeof(internetAddress));
     ipString.resize(INET_ADDRSTRLEN);
+    ipString = "INVALID";
 }
 
 } // namespace sck

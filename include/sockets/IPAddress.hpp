@@ -63,7 +63,7 @@ class IPAddress
 
     /**
      * @brief Construct from 32-bit integer
-     * @param address IP address in host byte order
+     * @param address IP address in network byte order
      */
     IPAddress(const uint32_t address);
     /// @}

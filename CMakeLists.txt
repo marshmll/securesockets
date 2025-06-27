@@ -24,7 +24,7 @@ else()
 endif()
 
 # Create the library
-add_library(sockets STATIC ${SRC})
+add_library(sockets SHARED ${SRC})
 
 target_link_libraries(sockets PRIVATE OpenSSL::SSL OpenSSL::Crypto)
 
