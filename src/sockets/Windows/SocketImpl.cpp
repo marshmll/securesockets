@@ -4,6 +4,7 @@
 
 namespace sck
 {
+
 sockaddr_in impl::SocketImpl::createAddress(const uint32_t addr, const unsigned short port)
 {
     sockaddr_in sa = {};
@@ -16,14 +17,14 @@ sockaddr_in impl::SocketImpl::createAddress(const uint32_t addr, const unsigned 
     return sa;
 }
 
-SocketHandle impl::SocketImpl::invalidSocketHandle()
+SocketHandle impl::SocketImpl::invalidHandle()
 {
     return INVALID_SOCKET;
 }
 
 bool impl::SocketImpl::isValidHandle(SocketHandle handle)
 {
-    return handle != invalidSocketHandle();
+    return handle != invalidHandle();
 }
 
 void impl::SocketImpl::close(SocketHandle handle)
@@ -61,4 +62,5 @@ Socket::Status impl::SocketImpl::getErrorStatus()
         return Socket::Status::Error;
     }
 }
+
 } // namespace sck

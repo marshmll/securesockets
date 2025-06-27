@@ -3,9 +3,10 @@
 
 #include <iostream>
 
-using namespace sck;
+namespace sck
+{
 
-Socket::Socket(Type type) : type(type), handle(impl::SocketImpl::invalidSocketHandle())
+Socket::Socket(Type type) : type(type), handle(impl::SocketImpl::invalidHandle())
 {
 }
 
@@ -29,7 +30,7 @@ Socket &Socket::operator=(Socket &&socket) noexcept
     handle = socket.handle;
     blocking = socket.blocking;
 
-    socket.handle = impl::SocketImpl::invalidSocketHandle();
+    socket.handle = impl::SocketImpl::invalidHandle();
 
     return *this;
 }
@@ -65,6 +66,15 @@ void Socket::create()
         }
 
         create(handle);
+    }
+}
+
+void Socket::close()
+{
+    if (impl::SocketImpl::isValidHandle(handle))
+    {
+        impl::SocketImpl::close(handle);
+        handle = impl::SocketImpl::invalidHandle();
     }
 }
 
@@ -104,3 +114,5 @@ void Socket::create(SocketHandle handle)
         }
     }
 }
+
+} // namespace sck

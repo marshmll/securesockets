@@ -68,7 +68,7 @@ class SocketImpl
      *         => INVALID_SOCKET on Windows
      *         => -1 on Unix-like systems
      */
-    static SocketHandle invalidSocketHandle();
+    static SocketHandle invalidHandle();
 
     /**
      * @brief Checks if a socket handle is valid

@@ -10,7 +10,11 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(OpenSSL REQUIRED)
 
 set(SRC
+    ./src/sockets/IPAddress.cpp
     ./src/sockets/Socket.cpp
+    ./src/sockets/UDPSocket.cpp
+    ./src/sockets/TCPClientSocket.cpp
+    ./src/sockets/TCPServerSocket.cpp
 )
 
 if(WIN32)
