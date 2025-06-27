@@ -4,8 +4,8 @@
 #include <fcntl.h>
 #include <iostream>
 
-using namespace sck;
-
+namespace sck
+{
 sockaddr_in impl::SocketImpl::createAddress(const uint32_t addr, const unsigned short port)
 {
     sockaddr_in sa = {};
@@ -81,3 +81,4 @@ Socket::Status impl::SocketImpl::getErrorStatus()
         return Socket::Status::Error;
     }
 }
+} // namespace sck

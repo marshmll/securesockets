@@ -1,6 +1,8 @@
 #include "sockets/Socket.hpp"
 #include "sockets/SocketImpl.hpp"
 
+#include <iostream>
+
 using namespace sck;
 
 Socket::Socket(Type type) : type(type), handle(impl::SocketImpl::invalidSocketHandle())

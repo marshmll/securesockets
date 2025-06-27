@@ -1,0 +1,64 @@
+#include <sockets/SocketImpl.hpp>
+
+#include <cstring>
+
+namespace sck
+{
+sockaddr_in impl::SocketImpl::createAddress(const uint32_t addr, const unsigned short port)
+{
+    sockaddr_in sa = {};
+    memset(&sa, 0, sizeof(sa));
+
+    sa.sin_addr.s_addr = htonl(addr);
+    sa.sin_family = AF_INET;
+    sa.sin_port = htons(port);
+
+    return sa;
+}
+
+SocketHandle impl::SocketImpl::invalidSocketHandle()
+{
+    return INVALID_SOCKET;
+}
+
+bool impl::SocketImpl::isValidHandle(SocketHandle handle)
+{
+    return handle != invalidSocketHandle();
+}
+
+void impl::SocketImpl::close(SocketHandle handle)
+{
+    closesocket(handle);
+}
+
+void impl::SocketImpl::setBlocking(SocketHandle handle, const bool blocking)
+{
+    u_long block = blocking ? 0 : 1;
+    ioctlsocket(handle, static_cast<long>(FIONBIO), &block);
+}
+
+Socket::Status impl::SocketImpl::getErrorStatus()
+{
+    switch (WSAGetLastError())
+    {
+    case WSAEWOULDBLOCK:
+        return Socket::Status::Blocked;
+    case WSAEALREADY:
+        return Socket::Status::Blocked;
+    case WSAECONNABORTED:
+        return Socket::Status::Disconnected;
+    case WSAECONNRESET:
+        return Socket::Status::Disconnected;
+    case WSAETIMEDOUT:
+        return Socket::Status::Disconnected;
+    case WSAENETRESET:
+        return Socket::Status::Disconnected;
+    case WSAENOTCONN:
+        return Socket::Status::Disconnected;
+    case WSAEISCONN:
+        return Socket::Status::Ready;
+    default:
+        return Socket::Status::Error;
+    }
+}
+} // namespace sck

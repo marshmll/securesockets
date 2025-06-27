@@ -65,8 +65,8 @@ class SocketImpl
      * @brief Gets the platform-specific invalid socket handle value
      *
      * @return SocketHandle The invalid socket handle value:
-     *         - INVALID_SOCKET on Windows
-     *         - -1 on Unix-like systems
+     *         => INVALID_SOCKET on Windows
+     *         => -1 on Unix-like systems
      */
     static SocketHandle invalidSocketHandle();
 
@@ -101,8 +101,8 @@ class SocketImpl
      * @brief Gets the status corresponding to the last socket error
      *
      * @return Socket::Status The status corresponding to the last error:
-     *         - Socket::Status::Done on success
-     *         - Appropriate error status based on errno (Unix) or WSAGetLastError() (Windows)
+     *         => Socket::Status::Done on success
+     *         => Appropriate error status based on errno (Unix) or WSAGetLastError() (Windows)
      */
     static Socket::Status getErrorStatus();
 };
