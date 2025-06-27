@@ -9,12 +9,18 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Find OpenSSL
 find_package(OpenSSL REQUIRED)
 
+set(SRC
+    ./src/sockets/Socket.cpp
+)
+
+if(WIN32)
+    list(APPEND SRC ./src/sockets/Windows/SocketImpl.cpp)
+else()
+    list(APPEND SRC ./src/sockets/Unix/SocketImpl.cpp)
+endif()
+
 # Create the library
-add_library(sockets STATIC
-    src/sockets/Socket.cpp
-    src/sockets/TCPSocket.cpp
-    src/sockets/UDPSocket.cpp
-) 
+add_library(sockets STATIC ${SRC})
 
 target_link_libraries(sockets PRIVATE OpenSSL::SSL OpenSSL::Crypto)
 

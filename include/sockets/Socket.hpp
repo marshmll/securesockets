@@ -1,31 +1,114 @@
-#ifndef SOCKET_H
-#define SOCKET_H
+#pragma once
 
-#include <arpa/inet.h>
-#include <cassert>
-#include <cstring>
-#include <netinet/in.h>
-#include <string>
-#include <unistd.h>
+#include "sockets/SocketHandle.hpp"
 
 namespace sck
 {
+/**
+ * @class Socket
+ * @brief Base class for network socket operations
+ *
+ * This class provides the common interface and functionality for both TCP and UDP sockets.
+ * It handles socket creation, blocking mode, and basic socket operations while managing
+ * the underlying socket handle.
+ */
 class Socket
 {
   public:
-    Socket(const int domain, const int type, const int protocol = 0);
+    /**
+     * @enum Status
+     * @brief Represents the status of socket operations
+     */
+    enum class Status
+    {
+        Ready,        ///< Operation completed successfully
+        Blocked,      ///< Operation would block (non-blocking mode only)
+        Partial,      ///< Partial data was sent/received
+        Disconnected, ///< The remote host closed the connection
+        Error         ///< An unexpected error occurred
+    };
+
+    /**
+     * @brief Special port value indicating the system should assign a random available port
+     */
+    static constexpr unsigned short RandomPort = 0;
+
+    /**
+     * @brief Virtual destructor to allow proper cleanup in derived classes
+     */
     virtual ~Socket();
 
-    int setOpt(const int level, const int optname, const void *optval, const socklen_t optlen);
-    int bind(const unsigned short port);
-    bool good() const;
-    virtual void close();
+    // Delete copy operations to prevent socket duplication
+    Socket(const Socket &) = delete;
+    Socket &operator=(const Socket &) = delete;
 
-    static const std::string getErrorMsg();
+    /**
+     * @brief Move constructor
+     * @param socket The socket to move from
+     */
+    Socket(Socket &&socket) noexcept;
+
+    /**
+     * @brief Move assignment operator
+     * @param socket The socket to move from
+     * @return Reference to this socket
+     */
+    Socket &operator=(Socket &&socket) noexcept;
+
+    /**
+     * @brief Sets the blocking mode of the socket
+     * @param blocking True to enable blocking mode, false for non-blocking
+     */
+    void setBlocking(const bool blocking);
+
+    /**
+     * @brief Checks if the socket is in blocking mode
+     * @return True if the socket is blocking, false otherwise
+     */
+    [[nodiscard]] bool isBlocking() const;
 
   protected:
-    int sockFd;
+    /**
+     * @enum Type
+     * @brief The type of socket (TCP or UDP)
+     */
+    enum class Type
+    {
+        TCP, ///< Stream-oriented TCP socket
+        UDP  ///< Datagram-oriented UDP socket
+    };
+
+    /**
+     * @brief Constructs a socket of the specified type
+     * @param type The type of socket to create (TCP or UDP)
+     */
+    explicit Socket(Type type);
+
+    /**
+     * @brief Gets the underlying system socket handle
+     * @return The native socket handle
+     */
+    [[nodiscard]] SocketHandle getSystemHandle() const;
+
+    /**
+     * @brief Creates a new socket
+     */
+    void create();
+
+    /**
+     * @brief Closes the socket
+     */
+    void close();
+
+  private:
+    Type type;           ///< The socket type (TCP/UDP)
+    SocketHandle handle; ///< The native socket handle
+    bool blocking;       ///< Current blocking mode
+
+    /**
+     * @brief Creates a socket wrapper for an existing handle
+     * @param handle An existing native socket handle to wrap
+     */
+    void create(SocketHandle handle);
 };
 } // namespace sck
-
-#endif // SOCKET_H

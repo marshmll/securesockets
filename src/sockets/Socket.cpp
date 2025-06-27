@@ -1,51 +1,104 @@
-#include "securesockets/Socket.hpp"
+#include "sockets/Socket.hpp"
+#include "sockets/SocketImpl.hpp"
 
 using namespace sck;
 
-Socket::Socket(const int domain, const int type, const int protocol) : sockFd(-1)
+Socket::Socket(Type type) : type(type), handle(impl::SocketImpl::invalidSocketHandle())
 {
-    int optval = 1;
-    sockFd = socket(domain, type, protocol);
-
-    setOpt(SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
 }
 
 Socket::~Socket()
 {
-    this->close();
+    close();
 }
 
-int Socket::setOpt(const int level, const int optname, const void *optval, const socklen_t optlen)
+Socket::Socket(Socket &&socket) noexcept : type(socket.type), handle(socket.handle), blocking(socket.blocking)
 {
-    return setsockopt(sockFd, level, optname, &optval, optlen);
 }
 
-int Socket::bind(const unsigned short port)
+Socket &Socket::operator=(Socket &&socket) noexcept
 {
-    struct sockaddr_in sa;
-    memset(&sa, 0, sizeof(sa));
-    sa.sin_family = AF_INET;
-    sa.sin_addr.s_addr = INADDR_ANY;
-    sa.sin_port = htons(port);
+    if (&socket == this)
+        return *this;
 
-    return ::bind(sockFd, (struct sockaddr *)&sa, sizeof(sa));
+    close();
+
+    type = socket.type;
+    handle = socket.handle;
+    blocking = socket.blocking;
+
+    socket.handle = impl::SocketImpl::invalidSocketHandle();
+
+    return *this;
 }
 
-bool Socket::good() const
+void Socket::setBlocking(const bool blocking)
 {
-    return sockFd >= 0;
+    if (impl::SocketImpl::isValidHandle(handle))
+        impl::SocketImpl::setBlocking(handle, blocking);
+
+    this->blocking = blocking;
 }
 
-void Socket::close()
+bool Socket::isBlocking() const
 {
-    if (sockFd >= 0)
+    return blocking;
+}
+
+SocketHandle Socket::getSystemHandle() const
+{
+    return handle;
+}
+
+void Socket::create()
+{
+    if (!impl::SocketImpl::isValidHandle(this->handle))
     {
-        ::close(sockFd);
-        sockFd = -1;
+        const SocketHandle handle = socket(AF_INET, type == Type::TCP ? SOCK_STREAM : SOCK_DGRAM, 0);
+
+        if (!impl::SocketImpl::isValidHandle(handle))
+        {
+            std::cerr << "Failed to create socket" << std::endl;
+            return;
+        }
+
+        create(handle);
     }
 }
 
-const std::string Socket::getErrorMsg()
+void Socket::create(SocketHandle handle)
 {
-    return strerror(errno);
+    if (!impl::SocketImpl::isValidHandle(this->handle))
+    {
+        this->handle = handle;
+
+        setBlocking(blocking);
+
+        if (type == Type::TCP)
+        {
+            // Disable TCP buffering
+            int set_opt = 1;
+            if (setsockopt(handle, IPPROTO_TCP, TCP_NODELAY, &set_opt, sizeof(set_opt)) < 0)
+            {
+                std::cerr << "Failed to set socket option \"TCP_NODELAY\". TCP packets will be buffered!" << std::endl;
+            }
+
+            // Disable SIGPIPE signal on disconnection for MACOSX
+#ifdef __APPLE__
+            if (setsockopt(m_socket, SOL_SOCKET, SO_NOSIGPIPE, &set_opt, sizeof(set_opt)) < 0)
+            {
+                std::cerr << "Failed to set socket option \"SO_NOSIGPIPE\"" << std::endl;
+            }
+#endif
+        }
+        else if (type == Type::UDP)
+        {
+            // Set broadcast opt by default for UDP sockets
+            int set_opt = 1;
+            if (setsockopt(handle, SOL_SOCKET, SO_BROADCAST, reinterpret_cast<char *>(&set_opt), sizeof(set_opt)) < 0)
+            {
+                std::cerr << "Failed to set socket option \"SO_BROADCAST\" for UDP socket" << std::endl;
+            }
+        }
+    }
 }

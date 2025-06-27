@@ -1,38 +1,8 @@
 [
 {
-  "directory": "/home/renan/Desktop/securesockets/build",
-  "command": "/usr/bin/clang++  -I/home/renan/Desktop/securesockets/include -I/home/renan/Desktop/securesockets/src -g -std=gnu++17 -o CMakeFiles/securesockets.dir/src/securesockets/SecureTCPClient.cpp.o -c /home/renan/Desktop/securesockets/src/securesockets/SecureTCPClient.cpp",
-  "file": "/home/renan/Desktop/securesockets/src/securesockets/SecureTCPClient.cpp",
-  "output": "CMakeFiles/securesockets.dir/src/securesockets/SecureTCPClient.cpp.o"
-},
-{
-  "directory": "/home/renan/Desktop/securesockets/build",
-  "command": "/usr/bin/clang++  -I/home/renan/Desktop/securesockets/include -I/home/renan/Desktop/securesockets/src -g -std=gnu++17 -o CMakeFiles/securesockets.dir/src/securesockets/SecureTCPServer.cpp.o -c /home/renan/Desktop/securesockets/src/securesockets/SecureTCPServer.cpp",
-  "file": "/home/renan/Desktop/securesockets/src/securesockets/SecureTCPServer.cpp",
-  "output": "CMakeFiles/securesockets.dir/src/securesockets/SecureTCPServer.cpp.o"
-},
-{
-  "directory": "/home/renan/Desktop/securesockets/build/_deps/googletest-build/googlemock",
-  "command": "/usr/bin/clang++  -I/home/renan/Desktop/securesockets/build/_deps/googletest-src/googlemock/include -I/home/renan/Desktop/securesockets/build/_deps/googletest-src/googlemock -isystem /home/renan/Desktop/securesockets/build/_deps/googletest-src/googletest/include -isystem /home/renan/Desktop/securesockets/build/_deps/googletest-src/googletest -g -std=c++17 -Wall -Wshadow -Wconversion -DGTEST_HAS_PTHREAD=1 -fexceptions -W -Wpointer-arith -Wreturn-type -Wcast-qual -Wwrite-strings -Wswitch -Wunused-parameter -Wcast-align -Wchar-subscripts -Winline -Wredundant-decls -o CMakeFiles/gmock.dir/src/gmock-all.cc.o -c /home/renan/Desktop/securesockets/build/_deps/googletest-src/googlemock/src/gmock-all.cc",
-  "file": "/home/renan/Desktop/securesockets/build/_deps/googletest-src/googlemock/src/gmock-all.cc",
-  "output": "_deps/googletest-build/googlemock/CMakeFiles/gmock.dir/src/gmock-all.cc.o"
-},
-{
-  "directory": "/home/renan/Desktop/securesockets/build/_deps/googletest-build/googlemock",
-  "command": "/usr/bin/clang++  -isystem /home/renan/Desktop/securesockets/build/_deps/googletest-src/googlemock/include -isystem /home/renan/Desktop/securesockets/build/_deps/googletest-src/googlemock -isystem /home/renan/Desktop/securesockets/build/_deps/googletest-src/googletest/include -isystem /home/renan/Desktop/securesockets/build/_deps/googletest-src/googletest -g -std=c++17 -Wall -Wshadow -Wconversion -DGTEST_HAS_PTHREAD=1 -fexceptions -W -Wpointer-arith -Wreturn-type -Wcast-qual -Wwrite-strings -Wswitch -Wunused-parameter -Wcast-align -Wchar-subscripts -Winline -Wredundant-decls -o CMakeFiles/gmock_main.dir/src/gmock_main.cc.o -c /home/renan/Desktop/securesockets/build/_deps/googletest-src/googlemock/src/gmock_main.cc",
-  "file": "/home/renan/Desktop/securesockets/build/_deps/googletest-src/googlemock/src/gmock_main.cc",
-  "output": "_deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/src/gmock_main.cc.o"
-},
-{
-  "directory": "/home/renan/Desktop/securesockets/build/_deps/googletest-build/googletest",
-  "command": "/usr/bin/clang++  -I/home/renan/Desktop/securesockets/build/_deps/googletest-src/googletest/include -I/home/renan/Desktop/securesockets/build/_deps/googletest-src/googletest -g -std=c++17 -Wall -Wshadow -Wconversion -DGTEST_HAS_PTHREAD=1 -fexceptions -W -Wpointer-arith -Wreturn-type -Wcast-qual -Wwrite-strings -Wswitch -Wunused-parameter -Wcast-align -Wchar-subscripts -Winline -Wredundant-decls -o CMakeFiles/gtest.dir/src/gtest-all.cc.o -c /home/renan/Desktop/securesockets/build/_deps/googletest-src/googletest/src/gtest-all.cc",
-  "file": "/home/renan/Desktop/securesockets/build/_deps/googletest-src/googletest/src/gtest-all.cc",
-  "output": "_deps/googletest-build/googletest/CMakeFiles/gtest.dir/src/gtest-all.cc.o"
-},
-{
-  "directory": "/home/renan/Desktop/securesockets/build/_deps/googletest-build/googletest",
-  "command": "/usr/bin/clang++  -isystem /home/renan/Desktop/securesockets/build/_deps/googletest-src/googletest/include -isystem /home/renan/Desktop/securesockets/build/_deps/googletest-src/googletest -g -std=c++17 -Wall -Wshadow -Wconversion -DGTEST_HAS_PTHREAD=1 -fexceptions -W -Wpointer-arith -Wreturn-type -Wcast-qual -Wwrite-strings -Wswitch -Wunused-parameter -Wcast-align -Wchar-subscripts -Winline -Wredundant-decls -o CMakeFiles/gtest_main.dir/src/gtest_main.cc.o -c /home/renan/Desktop/securesockets/build/_deps/googletest-src/googletest/src/gtest_main.cc",
-  "file": "/home/renan/Desktop/securesockets/build/_deps/googletest-src/googletest/src/gtest_main.cc",
-  "output": "_deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/src/gtest_main.cc.o"
+  "directory": "/home/renan/Desktop/sockets/build",
+  "command": "/usr/bin/clang++  -I/home/renan/Desktop/sockets/include -I/home/renan/Desktop/sockets/src -g -std=gnu++17 -o CMakeFiles/sockets.dir/src/sockets/Socket.cpp.o -c /home/renan/Desktop/sockets/src/sockets/Socket.cpp",
+  "file": "/home/renan/Desktop/sockets/src/sockets/Socket.cpp",
+  "output": "CMakeFiles/sockets.dir/src/sockets/Socket.cpp.o"
 }
 ]
