@@ -28,11 +28,11 @@ IPAddress::IPAddress(const uint32_t address)
 {
     initVariables();
 
-    internetAddress.s_addr = address;
+    internetAddress.s_addr = htonl(address);
 
     if (address > 0)
     {
-        if (inet_ntop(AF_INET, &address, ipString.data(), ipString.size()) == NULL)
+        if (inet_ntop(AF_INET, &internetAddress.s_addr, ipString.data(), ipString.size()) == NULL)
         {
             std::cerr << "Failed to convert Internet Address (" << address << ") to string: " << strerror(errno)
                       << std::endl;

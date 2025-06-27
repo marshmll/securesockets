@@ -2,7 +2,7 @@
 
 int main(void)
 {
-    sck::IPAddress test("127.0.0.1");
+    sck::IPAddress test(16777343);
 
     std::cout << test.toString() << std::endl;
     std::cout << test.toInteger() << std::endl;
