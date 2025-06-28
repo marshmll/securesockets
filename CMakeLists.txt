@@ -6,9 +6,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Find OpenSSL
-find_package(OpenSSL REQUIRED)
-
 set(SRC
     ./src/sockets/IPAddress.cpp
     ./src/sockets/Socket.cpp
@@ -19,6 +16,7 @@ set(SRC
 
 if(WIN32)
     list(APPEND SRC ./src/sockets/Windows/SocketImpl.cpp)
+    list(APPEND SRC ./src/sockets/Windows/defines.cpp)
 else()
     list(APPEND SRC ./src/sockets/Unix/SocketImpl.cpp)
 endif()
@@ -27,6 +25,8 @@ endif()
 add_library(sockets SHARED ${SRC})
 
 add_subdirectory("./test")
+
+find_package(OpenSSL REQUIRED)
 
 target_link_libraries(sockets PRIVATE OpenSSL::SSL OpenSSL::Crypto)
 
@@ -42,23 +42,4 @@ target_include_directories(sockets
 set_target_properties(sockets PROPERTIES 
     VERSION ${PROJECT_VERSION}
     SOVERSION ${PROJECT_VERSION_MAJOR}
-)
-
-# Installation configuration
-include(GNUInstallDirs)
-
-install(TARGETS sockets
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/sockets
-)
-
-install(DIRECTORY include/sockets
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-)
-
-# Generate and install pkg-config file
-configure_file(sockets.pc.in sockets.pc @ONLY)
-install(FILES ${CMAKE_BINARY_DIR}/sockets.pc 
-    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/pkgconfig
 )

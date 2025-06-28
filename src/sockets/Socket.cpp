@@ -90,7 +90,7 @@ void Socket::create(SocketHandle handle)
         {
             // Disable TCP buffering
             int set_opt = 1;
-            if (setsockopt(handle, IPPROTO_TCP, TCP_NODELAY, &set_opt, sizeof(set_opt)) < 0)
+            if (setsockopt(handle, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char *>(&set_opt), sizeof(set_opt)) < 0)
             {
                 std::cerr << "Failed to set socket option \"TCP_NODELAY\". TCP packets will be buffered!" << std::endl;
             }

@@ -7,6 +7,8 @@ namespace sck
 
 sockaddr_in impl::SocketImpl::createAddress(const uint32_t addr, const unsigned short port)
 {
+    WinSock2::instance();
+
     sockaddr_in sa = {};
     memset(&sa, 0, sizeof(sa));
 
@@ -19,27 +21,37 @@ sockaddr_in impl::SocketImpl::createAddress(const uint32_t addr, const unsigned 
 
 SocketHandle impl::SocketImpl::invalidHandle()
 {
+    WinSock2::instance();
+
     return INVALID_SOCKET;
 }
 
 bool impl::SocketImpl::isValidHandle(SocketHandle handle)
 {
+    WinSock2::instance();
+
     return handle != invalidHandle();
 }
 
 void impl::SocketImpl::close(SocketHandle handle)
 {
+    WinSock2::instance();
+
     closesocket(handle);
 }
 
 void impl::SocketImpl::setBlocking(SocketHandle handle, const bool blocking)
 {
+    WinSock2::instance();
+
     u_long block = blocking ? 0 : 1;
     ioctlsocket(handle, static_cast<long>(FIONBIO), &block);
 }
 
 Socket::Status impl::SocketImpl::getErrorStatus()
 {
+    WinSock2::instance();
+
     switch (WSAGetLastError())
     {
     case WSAEWOULDBLOCK:
