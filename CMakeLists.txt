@@ -26,6 +26,8 @@ endif()
 # Create the library
 add_library(sockets SHARED ${SRC})
 
+add_subdirectory("./test")
+
 target_link_libraries(sockets PRIVATE OpenSSL::SSL OpenSSL::Crypto)
 
 target_include_directories(sockets 

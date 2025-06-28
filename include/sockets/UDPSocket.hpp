@@ -63,7 +63,7 @@ class UDPSocket : public Socket
      * @note Binding to IPAddress::Broadcast will fail
      * @note Subsequent calls will close and recreate the socket
      */
-    [[nodiscard]] Status bind(const unsigned short port, const IPAddress &ip = IPAddress::OSDefined);
+    [[nodiscard]] Status bind(const unsigned short port, const IPAddress &ip = IPAddress::Any);
 
     /**
      * @brief Unbind the socket from its port

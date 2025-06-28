@@ -1,8 +1,0 @@
-[
-{
-  "directory": "/home/renan/Desktop/sockets/build",
-  "command": "/usr/bin/clang++  -I/home/renan/Desktop/sockets/include -I/home/renan/Desktop/sockets/src -g -std=gnu++17 -o CMakeFiles/sockets.dir/src/sockets/Socket.cpp.o -c /home/renan/Desktop/sockets/src/sockets/Socket.cpp",
-  "file": "/home/renan/Desktop/sockets/src/sockets/Socket.cpp",
-  "output": "CMakeFiles/sockets.dir/src/sockets/Socket.cpp.o"
-}
-]

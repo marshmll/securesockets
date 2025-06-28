@@ -24,12 +24,20 @@ namespace sck
 class IPAddress
 {
   public:
+    /// @name Error Constants
+    /// @{
+    /**
+     * @brief Convenience string for invalid ip string checks
+     */
+    static const char *InvalidIPString;
+    /// @}
+
     /// @name Common Address Constants
     /// @{
     /**
      * @brief Special address indicating the OS should define the address
      */
-    static const IPAddress OSDefined;
+    static const IPAddress Any;
 
     /**
      * @brief Localhost address (127.0.0.1)
@@ -40,6 +48,11 @@ class IPAddress
      * @brief Broadcast address (255.255.255.255)
      */
     static const IPAddress Broadcast;
+
+    /**
+     * @brief Invalid address
+     */
+    static const IPAddress Invalid;
     /// @}
 
     /**
@@ -54,6 +67,13 @@ class IPAddress
 
     /// @name Constructors
     /// @{
+
+    /**
+     * @brief Construct a default IpAddress object.
+     * @note Sets internet address and ip string to 0.
+     */
+    IPAddress();
+
     /**
      * @brief Construct from string representation
      * @param address IP address in string format (e.g., "192.168.1.1") or hostname
@@ -64,6 +84,7 @@ class IPAddress
     /**
      * @brief Construct from 32-bit integer
      * @param address IP address in network byte order
+     * @warning The address needs to be in NETWORK BYTE ORDER. Use `ntohl` and `htonl` for conversions.
      */
     IPAddress(const uint32_t address);
     /// @}
@@ -77,14 +98,9 @@ class IPAddress
     const std::string &toString() const;
 
     /**
-     * @brief Get binary address representation
-     * @return Const reference to the internal in_addr structure
-     */
-    const in_addr &toInternetAddress() const;
-
-    /**
      * @brief Get 32-bit integer representation
      * @return Const reference to the address as 32-bit integer (network byte order)
+     * @warning The returned integer is in NETWORK BYTE ORDER. Use `ntohl and htonl` for conversions.
      */
     const uint32_t &toInteger() const;
     /// @}
@@ -95,6 +111,13 @@ class IPAddress
      * @return true if addresses are identical
      */
     bool operator==(IPAddress other) const;
+
+    /**
+     * @brief Inequality comparison operator
+     * @param other IPAddress to compare with
+     * @return true if addresses are not identical
+     */
+    bool operator!=(IPAddress other) const;
 
     /// @name Static Methods
     /// @{

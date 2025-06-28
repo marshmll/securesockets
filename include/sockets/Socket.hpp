@@ -96,6 +96,12 @@ class Socket
     void create();
 
     /**
+     * @brief Creates a socket wrapper for an existing handle
+     * @param handle An existing native socket handle to wrap
+     */
+    void create(SocketHandle handle);
+
+    /**
      * @brief Closes the socket
      */
     void close();
@@ -104,11 +110,5 @@ class Socket
     Type type;           ///< The socket type (TCP/UDP)
     SocketHandle handle; ///< The native socket handle
     bool blocking;       ///< Current blocking mode
-
-    /**
-     * @brief Creates a socket wrapper for an existing handle
-     * @param handle An existing native socket handle to wrap
-     */
-    void create(SocketHandle handle);
 };
 } // namespace sck

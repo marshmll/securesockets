@@ -6,7 +6,7 @@
 namespace sck
 {
 
-Socket::Socket(Type type) : type(type), handle(impl::SocketImpl::invalidHandle())
+Socket::Socket(Type type) : type(type), handle(impl::SocketImpl::invalidHandle()), blocking(true)
 {
 }
 

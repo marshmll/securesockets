@@ -3,9 +3,17 @@
 namespace sck
 {
 
-const IPAddress IPAddress::OSDefined(0);
+const char *IPAddress::InvalidIPString = "INVALID";
+
+const IPAddress IPAddress::Any(0);
 const IPAddress IPAddress::LocalHost("127.0.0.1");
 const IPAddress IPAddress::Broadcast("255.255.255.255");
+const IPAddress IPAddress::Invalid;
+
+IPAddress::IPAddress()
+{
+    initVariables();
+}
 
 IPAddress::IPAddress(const std::string &address)
 {
@@ -49,11 +57,6 @@ const std::string &IPAddress::toString() const
     return ipString;
 }
 
-const in_addr &IPAddress::toInternetAddress() const
-{
-    return internetAddress;
-}
-
 const uint32_t &IPAddress::toInteger() const
 {
     return internetAddress.s_addr;
@@ -62,6 +65,11 @@ const uint32_t &IPAddress::toInteger() const
 bool IPAddress::operator==(IPAddress other) const
 {
     return this->ipString == other.ipString && this->internetAddress.s_addr == other.internetAddress.s_addr;
+}
+
+bool IPAddress::operator!=(IPAddress other) const
+{
+    return this->ipString != other.ipString || this->internetAddress.s_addr != other.internetAddress.s_addr;
 }
 
 std::optional<IPAddress::Resolution> IPAddress::resolve(const std::string hostname)
@@ -104,7 +112,6 @@ std::optional<IPAddress::Resolution> IPAddress::resolve(const std::string hostna
                     {
                         res.inAddress = ipv4->sin_addr;
                         res.ipString = *str;
-
                         return res;
                     }
                     else
@@ -125,17 +132,18 @@ std::optional<std::string> IPAddress::convertInternetAddressToIpString(const uin
     std::string str;
     str.resize(INET_ADDRSTRLEN);
 
-    if (inet_ntop(AF_INET, &address, str.data(), str.size()) != NULL)
-        return str;
+    if (inet_ntop(AF_INET, &address, str.data(), str.size()) == NULL)
+        return std::nullopt;
 
-    return std::nullopt;
+    str.resize(strlen(str.c_str())); // Remove unused space at end of string
+    return str;
 }
 
 void IPAddress::initVariables()
 {
     memset(&internetAddress, 0, sizeof(internetAddress));
     ipString.resize(INET_ADDRSTRLEN);
-    ipString = "INVALID";
+    ipString = InvalidIPString;
 }
 
 } // namespace sck
