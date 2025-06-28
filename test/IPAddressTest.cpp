@@ -55,6 +55,24 @@ TEST(IPAddressTest, HostnameResolution)
     EXPECT_TRUE(localhost_address.toString() == sck::IPAddress::LocalHost.toString());
 }
 
+TEST(IPAddressTest, EqualityComparison)
+{
+    sck::IPAddress first("127.0.0.1");
+    sck::IPAddress second("localhost");
+
+    EXPECT_TRUE(first == second);
+    EXPECT_TRUE(second == first);
+}
+
+TEST(IPAddressTest, InequalityComparison)
+{
+    sck::IPAddress first("127.0.0.1");
+    sck::IPAddress second("192.168.100.1");
+
+    EXPECT_TRUE(first != second);
+    EXPECT_TRUE(second != first);
+}
+
 TEST(IPAddressTest, ConstructorCopySemantics)
 {
     sck::IPAddress address("www.gnu.org");
