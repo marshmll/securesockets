@@ -2,6 +2,8 @@
 
 #include "sockets/SocketHandle.hpp"
 
+#include <cstring>
+
 namespace sck
 {
 /**
@@ -54,6 +56,12 @@ class Socket
      * @return Reference to this socket
      */
     Socket &operator=(Socket &&socket) noexcept;
+
+    /**
+     * @brief Get the port this socket is bound to
+     * @return The bound port number, or 0 if not bound or error occurred
+     */
+    [[nodiscard]] unsigned short getBoundPort() const;
 
     /**
      * @brief Sets the blocking mode of the socket

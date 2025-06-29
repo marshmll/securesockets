@@ -49,21 +49,15 @@ class UDPSocket : public Socket
     ~UDPSocket();
 
     /**
-     * @brief Get the port this socket is bound to
-     * @return The bound port number, or 0 if not bound or error occurred
-     */
-    [[nodiscard]] unsigned short getBoundPort() const;
-
-    /**
      * @brief Bind the socket to a specific port and address
      * @param port The port to bind to (use 0 for OS-assigned port)
-     * @param ip The IP address to bind to (default: OSDefined)
+     * @param address The IP address to bind to (default: OSDefined)
      * @return Status::Ready on success, Status::Error on failure
      *
      * @note Binding to IPAddress::Broadcast will fail
      * @note Subsequent calls will close and recreate the socket
      */
-    [[nodiscard]] Status bind(const unsigned short port, const IPAddress &ip = IPAddress::Any);
+    [[nodiscard]] Status bind(const unsigned short port, const IPAddress &address = IPAddress::Any);
 
     /**
      * @brief Unbind the socket from its port

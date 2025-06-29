@@ -11,20 +11,19 @@ option(BUILD_TESTS "Build tests" OFF)
 set(SRC
     ./src/sockets/IPAddress.cpp
     ./src/sockets/Socket.cpp
-    ./src/sockets/UDPSocket.cpp
     ./src/sockets/TCPClientSocket.cpp
     ./src/sockets/TCPServerSocket.cpp
+    ./src/sockets/UDPSocket.cpp
 )
 
 if(WIN32)
     list(APPEND SRC ./src/sockets/Windows/SocketImpl.cpp)
-    list(APPEND SRC ./src/sockets/Windows/defines.cpp)
 else()
     list(APPEND SRC ./src/sockets/Unix/SocketImpl.cpp)
 endif()
 
 # Create the library
-add_library(sockets STATIC ${SRC})
+add_library(sockets SHARED ${SRC})
 
 add_subdirectory("./test")
 

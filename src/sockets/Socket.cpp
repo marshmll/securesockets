@@ -43,6 +43,24 @@ void Socket::setBlocking(const bool blocking)
     this->blocking = blocking;
 }
 
+unsigned short Socket::getBoundPort() const
+{
+    if (impl::SocketImpl::isValidHandle(getSystemHandle()))
+    {
+        sockaddr_in sa = {};
+        memset(&sa, 0, sizeof(sa));
+
+        impl::SocketImpl::AddrLen size = sizeof(sa);
+
+        if (getsockname(getSystemHandle(), reinterpret_cast<sockaddr *>(&sa), &size) >= 0)
+        {
+            return ntohs(sa.sin_port);
+        }
+    }
+
+    return 0; // Failed to retrieve port
+}
+
 bool Socket::isBlocking() const
 {
     return blocking;
