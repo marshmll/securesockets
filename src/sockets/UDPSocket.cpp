@@ -69,7 +69,8 @@ Socket::Status UDPSocket::send(const void *data, const size_t size, const IPAddr
 
     sockaddr_in addr = impl::SocketImpl::createAddress(address.toInteger(), port);
 
-    ssize_t sent = sendto(getSystemHandle(), data, size, 0, reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
+    ssize_t sent = sendto(getSystemHandle(), reinterpret_cast<const char *>(data), size, 0,
+                          reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
 
     if (sent == -1)
         return impl::SocketImpl::getErrorStatus();
@@ -93,8 +94,8 @@ Socket::Status UDPSocket::recv(void *const buf, const size_t size, size_t &recei
 
     impl::SocketImpl::AddrLen addr_len = sizeof(addr);
 
-    received =
-        static_cast<size_t>(recvfrom(getSystemHandle(), buf, size, 0, reinterpret_cast<sockaddr *>(&addr), &addr_len));
+    received = static_cast<size_t>(recvfrom(getSystemHandle(), reinterpret_cast<char *const>(buf), size, 0,
+                                            reinterpret_cast<sockaddr *>(&addr), &addr_len));
 
     remote_address = IPAddress(ntohl(addr.sin_addr.s_addr));
     remote_port = addr.sin_port;

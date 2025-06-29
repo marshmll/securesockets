@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+option(BUILD_TESTS "Build tests" OFF)
+
 set(SRC
     ./src/sockets/IPAddress.cpp
     ./src/sockets/Socket.cpp
@@ -22,13 +24,17 @@ else()
 endif()
 
 # Create the library
-add_library(sockets SHARED ${SRC})
+add_library(sockets STATIC ${SRC})
 
 add_subdirectory("./test")
 
-find_package(OpenSSL REQUIRED)
-
-target_link_libraries(sockets PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+if (WIN32)
+    # find_library(crypt REQUIRED NAMES crypt32)
+    target_link_libraries(sockets PRIVATE ws2_32)
+else()
+    find_package(OpenSSL REQUIRED)
+    target_link_libraries(sockets PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+endif()
 
 target_include_directories(sockets 
     PRIVATE 

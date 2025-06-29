@@ -1,3 +1,5 @@
+if (BUILD_TESTS)
+
 include(FetchContent)
 FetchContent_Declare(
     googletest
@@ -21,3 +23,5 @@ target_link_libraries(IPAddressTest PRIVATE GTest::gtest_main sockets)
 include(GoogleTest)
 gtest_discover_tests(SocketTest)
 gtest_discover_tests(IPAddressTest)
+
+endif()

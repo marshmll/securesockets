@@ -5,9 +5,7 @@
 
 #ifdef __WIN32__
 
-#include <windows.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
+#include "sockets/Windows/Headers.hpp"
 
 #else
 

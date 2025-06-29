@@ -57,7 +57,7 @@ const std::string &IPAddress::toString() const
     return ipString;
 }
 
-const uint32_t &IPAddress::toInteger() const
+const uint32_t IPAddress::toInteger() const
 {
     return internetAddress.s_addr;
 }

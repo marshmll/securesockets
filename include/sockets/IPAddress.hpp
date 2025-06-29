@@ -1,11 +1,20 @@
 #pragma once
 
+#ifdef __WIN32__
+
+#include "sockets/Windows/Headers.hpp"
+
+#else
+
 #include <arpa/inet.h>
+#include <netdb.h>
+#include <netinet/in.h>
+
+#endif
+
 #include <cstdint>
 #include <cstring>
 #include <iostream>
-#include <netdb.h>
-#include <netinet/in.h>
 #include <optional>
 #include <string>
 
@@ -99,10 +108,10 @@ class IPAddress
 
     /**
      * @brief Get 32-bit integer representation
-     * @return Const reference to the address as 32-bit integer (network byte order)
+     * @return Copy of the address as 32-bit integer (network byte order)
      * @warning The returned integer is in NETWORK BYTE ORDER. Use `ntohl and htonl` for conversions.
      */
-    const uint32_t &toInteger() const;
+    const uint32_t toInteger() const;
     /// @}
 
     /**
