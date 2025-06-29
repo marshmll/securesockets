@@ -49,6 +49,19 @@ class UDPSocket : public Socket
     ~UDPSocket();
 
     /**
+     * @brief Move constructor
+     * @param socket The socket to move from
+     */
+    UDPSocket(UDPSocket &&socket) noexcept = default;
+
+    /**
+     * @brief Move assignment operator
+     * @param socket The socket to move from
+     * @return Reference to this socket
+     */
+    UDPSocket &operator=(UDPSocket &&socket) noexcept = default;
+
+    /**
      * @brief Bind the socket to a specific port and address
      * @param port The port to bind to (use 0 for OS-assigned port)
      * @param address The IP address to bind to (default: OSDefined)
@@ -94,8 +107,5 @@ class UDPSocket : public Socket
      */
     [[nodiscard]] Status recv(void *const buf, const size_t size, size_t &received, IPAddress &remote_ip,
                               unsigned short &port);
-
-  private:
-    std::vector<std::byte> buffer; ///< Internal buffer for received datagrams
 };
 } // namespace sck

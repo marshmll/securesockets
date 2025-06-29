@@ -3,7 +3,7 @@
 namespace sck
 {
 
-UDPSocket::UDPSocket() : Socket(Type::UDP), buffer(MaxDatagramUsableSize)
+UDPSocket::UDPSocket() : Socket(Type::UDP)
 {
 }
 

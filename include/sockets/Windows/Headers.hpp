@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef __WIN32__
+
 #ifndef UNICODE
 #define UNICODE
 #endif
@@ -28,3 +30,5 @@
 #include <ws2tcpip.h>
 #include <mstcpip.h>
 #include <windows.h>
+
+#endif
