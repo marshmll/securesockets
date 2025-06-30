@@ -87,15 +87,6 @@ void Socket::create()
     }
 }
 
-void Socket::close()
-{
-    if (impl::SocketImpl::isValidHandle(handle))
-    {
-        impl::SocketImpl::close(handle);
-        handle = impl::SocketImpl::invalidHandle();
-    }
-}
-
 void Socket::create(SocketHandle handle)
 {
     if (!impl::SocketImpl::isValidHandle(this->handle))
@@ -130,6 +121,15 @@ void Socket::create(SocketHandle handle)
                 std::cerr << "Failed to set socket option \"SO_BROADCAST\" for UDP socket" << std::endl;
             }
         }
+    }
+}
+
+void Socket::close()
+{
+    if (impl::SocketImpl::isValidHandle(handle))
+    {
+        impl::SocketImpl::close(handle);
+        handle = impl::SocketImpl::invalidHandle();
     }
 }
 

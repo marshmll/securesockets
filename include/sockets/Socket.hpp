@@ -107,16 +107,18 @@ class Socket
      * @brief Creates a socket wrapper for an existing handle
      * @param handle An existing native socket handle to wrap
      */
-    void create(SocketHandle handle);
+    virtual void create(SocketHandle handle);
 
     /**
      * @brief Closes the socket
      */
-    void close();
+    virtual void close();
 
   private:
     Type type;           ///< The socket type (TCP/UDP)
     SocketHandle handle; ///< The native socket handle
     bool blocking;       ///< Current blocking mode
+
+    friend class SSLSocket;
 };
 } // namespace sck

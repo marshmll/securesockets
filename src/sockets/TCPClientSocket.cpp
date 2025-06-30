@@ -54,7 +54,7 @@ Socket::Status TCPClientSocket::connect(IPAddress remote_address, unsigned short
     create();
 
     sockaddr_in addr = impl::SocketImpl::createAddress(remote_address.toInteger(), remote_port);
-    if (timeout_ms > 0)
+    if (timeout_ms == 0)
     {
         if (::connect(getSystemHandle(), reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) < 0)
         {
