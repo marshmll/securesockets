@@ -14,7 +14,7 @@ TCPClientSocket::~TCPClientSocket()
 
 std::optional<IPAddress> TCPClientSocket::getRemoteAddress() const
 {
-    if (getSystemHandle() != impl::SocketImpl::invalidHandle())
+    if (getSystemHandle() != impl::SocketImpl::InvalidHandle)
     {
         sockaddr_in addr = {};
         impl::SocketImpl::AddrLen len = sizeof(addr);
@@ -32,7 +32,7 @@ std::optional<IPAddress> TCPClientSocket::getRemoteAddress() const
 
 unsigned short TCPClientSocket::getRemotePort() const
 {
-    if (getSystemHandle() != impl::SocketImpl::invalidHandle())
+    if (getSystemHandle() != impl::SocketImpl::InvalidHandle)
     {
         sockaddr_in addr = {};
         impl::SocketImpl::AddrLen len = sizeof(addr);

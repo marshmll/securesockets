@@ -22,14 +22,9 @@ sockaddr_in impl::SocketImpl::createAddress(const uint32_t addr, const unsigned 
     return sa;
 }
 
-SocketHandle impl::SocketImpl::invalidHandle()
-{
-    return -1;
-}
-
 bool impl::SocketImpl::isValidHandle(SocketHandle handle)
 {
-    return handle != invalidHandle();
+    return handle != InvalidHandle;
 }
 
 void impl::SocketImpl::close(SocketHandle handle)

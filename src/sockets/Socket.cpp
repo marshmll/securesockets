@@ -6,7 +6,7 @@
 namespace sck
 {
 
-Socket::Socket(Type type) : type(type), handle(impl::SocketImpl::invalidHandle()), blocking(true)
+Socket::Socket(Type type) : type(type), handle(impl::SocketImpl::InvalidHandle), blocking(true)
 {
 }
 
@@ -30,7 +30,7 @@ Socket &Socket::operator=(Socket &&socket) noexcept
     handle = socket.handle;
     blocking = socket.blocking;
 
-    socket.handle = impl::SocketImpl::invalidHandle();
+    socket.handle = impl::SocketImpl::InvalidHandle;
 
     return *this;
 }
@@ -129,7 +129,7 @@ void Socket::close()
     if (impl::SocketImpl::isValidHandle(handle))
     {
         impl::SocketImpl::close(handle);
-        handle = impl::SocketImpl::invalidHandle();
+        handle = impl::SocketImpl::InvalidHandle;
     }
 }
 

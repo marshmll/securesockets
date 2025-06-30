@@ -13,7 +13,7 @@ class MockSocket : public sck::Socket
     using sck::Socket::getSystemHandle;
 };
 
-static const sck::SocketHandle invalidHandle = sck::impl::SocketImpl::invalidHandle();
+static const sck::SocketHandle invalidHandle = sck::impl::SocketImpl::InvalidHandle;
 
 TEST(SocketTest, TypeTraits)
 {

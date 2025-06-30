@@ -2,7 +2,7 @@
 
 #include "sockets/UDPSocket.hpp"
 
-static const sck::SocketHandle invalidHandle = sck::impl::SocketImpl::invalidHandle();
+static const sck::SocketHandle invalidHandle = sck::impl::SocketImpl::InvalidHandle;
 
 TEST(UDPSocketTest, TypeTraits)
 {

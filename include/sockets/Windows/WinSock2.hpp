@@ -4,6 +4,9 @@
 
 #include "sockets/Windows/Headers.hpp"
 
+#include <stdexcept>
+#include <string>
+
 namespace sck
 {
 
@@ -57,7 +60,7 @@ struct WinSock2
 
     /**
      * @brief Gets the singleton instance
-     * @return WinSock2& Reference to the single instance
+     * @return WinSock2& Const reference to the single instance
      *
      * Features:
      * - Thread-safe initialization (C++11+)
@@ -66,7 +69,7 @@ struct WinSock2
      *
      * @usage `WinSock2::instance();` before socket operations
      */
-    static WinSock2 &instance()
+    static const WinSock2 &instance()
     {
         static const WinSock2 w = WinSock2();
         return w;

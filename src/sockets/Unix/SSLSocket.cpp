@@ -30,7 +30,7 @@ void SSLSocket::close()
     {
         OpenSSL::destroy(ssl, ctx);
         impl::SocketImpl::close(handle);
-        handle = impl::SocketImpl::invalidHandle();
+        handle = impl::SocketImpl::InvalidHandle;
     }
 }
 

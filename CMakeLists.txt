@@ -18,8 +18,10 @@ set(SRC
 
 if(WIN32)
     list(APPEND SRC ./src/sockets/Windows/SocketImpl.cpp)
+    list(APPEND SRC ./src/sockets/Windows/SSLSocket.cpp)
 else()
     list(APPEND SRC ./src/sockets/Unix/SocketImpl.cpp)
+    list(APPEND SRC ./src/sockets/Unix/SSLSocket.cpp)
 endif()
 
 # Create the library

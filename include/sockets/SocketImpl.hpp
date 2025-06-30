@@ -47,8 +47,10 @@ class SocketImpl
      */
 #ifdef __WIN32__
     using AddrLen = int;
+    static constexpr UINT_PTR InvalidHandle = INVALID_SOCKET;
 #else
     using AddrLen = socklen_t;
+    static constexpr int InvalidHandle = -1;
 #endif
 
     /**
@@ -59,15 +61,6 @@ class SocketImpl
      * @return sockaddr_in Initialized address structure in network byte order
      */
     static sockaddr_in createAddress(const uint32_t addr, const unsigned short port);
-
-    /**
-     * @brief Gets the platform-specific invalid socket handle value
-     *
-     * @return SocketHandle The invalid socket handle value:
-     *         - INVALID_SOCKET on Windows
-     *         - -1 on Unix-like systems
-     */
-    static SocketHandle invalidHandle();
 
     /**
      * @brief Checks if a socket handle is valid

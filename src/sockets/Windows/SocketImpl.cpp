@@ -19,18 +19,11 @@ sockaddr_in impl::SocketImpl::createAddress(const uint32_t addr, const unsigned 
     return sa;
 }
 
-SocketHandle impl::SocketImpl::invalidHandle()
-{
-    WinSock2::instance();
-
-    return INVALID_SOCKET;
-}
-
 bool impl::SocketImpl::isValidHandle(SocketHandle handle)
 {
     WinSock2::instance();
 
-    return handle != invalidHandle();
+    return handle != InvalidHandle;
 }
 
 void impl::SocketImpl::close(SocketHandle handle)
