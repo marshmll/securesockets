@@ -24,10 +24,11 @@ class Socket
     enum class Status
     {
         Ready,        ///< Operation completed successfully
-        Blocked,      ///< Operation would block (non-blocking mode only)
+        WouldBlock,   ///< Operation would block (non-blocking mode only)
         Partial,      ///< Partial data was sent/received
         Disconnected, ///< The remote host closed the connection
-        Error         ///< An unexpected error occurred
+        Error,        ///< An unexpected error occurred
+        SSLError      ///< An SSL related error occurred
     };
 
     /**

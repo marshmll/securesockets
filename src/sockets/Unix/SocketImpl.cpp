@@ -4,10 +4,10 @@
 #include <fcntl.h>
 #include <iostream>
 
-namespace sck
+namespace sck::impl
 {
 
-sockaddr_in impl::SocketImpl::createAddress(const uint32_t addr, const unsigned short port)
+sockaddr_in SocketImpl::createAddress(const uint32_t addr, const unsigned short port)
 {
     sockaddr_in sa = {};
     memset(&sa, 0, sizeof(sa));
@@ -22,17 +22,17 @@ sockaddr_in impl::SocketImpl::createAddress(const uint32_t addr, const unsigned 
     return sa;
 }
 
-bool impl::SocketImpl::isValidHandle(SocketHandle handle)
+bool SocketImpl::isValidHandle(SocketHandle handle)
 {
     return handle != InvalidHandle;
 }
 
-void impl::SocketImpl::close(SocketHandle handle)
+void SocketImpl::close(SocketHandle handle)
 {
     ::close(handle);
 }
 
-void impl::SocketImpl::setBlocking(SocketHandle handle, const bool blocking)
+void SocketImpl::setBlocking(SocketHandle handle, const bool blocking)
 {
     const int flags = fcntl(handle, F_GETFL);
 
@@ -52,15 +52,47 @@ void impl::SocketImpl::setBlocking(SocketHandle handle, const bool blocking)
     }
 }
 
-Socket::Status impl::SocketImpl::getErrorStatus()
+int SocketImpl::waitRead(SocketHandle handle, const unsigned int timeout_ms)
+{
+    fd_set fds;
+    int width;
+
+    FD_ZERO(&fds);
+    FD_SET(handle, &fds);
+    width = handle + 1;
+
+    timeval time = {};
+    time.tv_sec = static_cast<time_t>(timeout_ms / 1000);
+    time.tv_usec = 0;
+
+    return select(width, &fds, nullptr, nullptr, &time);
+}
+
+int SocketImpl::waitWrite(SocketHandle handle, const unsigned int timeout_ms)
+{
+    fd_set fds;
+    int width;
+
+    FD_ZERO(&fds);
+    FD_SET(handle, &fds);
+    width = handle + 1;
+
+    timeval time = {};
+    time.tv_sec = static_cast<time_t>(timeout_ms / 1000);
+    time.tv_usec = 0;
+
+    return select(width, nullptr, &fds, nullptr, &time);
+}
+
+Socket::Status SocketImpl::getErrorStatus()
 {
     if ((errno == EAGAIN) || (errno == EINPROGRESS))
-        return Socket::Status::Blocked;
+        return Socket::Status::WouldBlock;
 
     switch (errno)
     {
     case EWOULDBLOCK:
-        return Socket::Status::Blocked;
+        return Socket::Status::WouldBlock;
     case ECONNABORTED:
         return Socket::Status::Disconnected;
     case ECONNRESET:
@@ -78,4 +110,4 @@ Socket::Status impl::SocketImpl::getErrorStatus()
     }
 }
 
-} // namespace sck
+} // namespace sck::impl

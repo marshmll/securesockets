@@ -38,7 +38,7 @@ class SSLSocket : public Socket
   protected:
 #ifdef __unix__
     OpenSSL::SSLContext ctx = nullptr;
-    OpenSSL::SSL ssl = nullptr;
+    OpenSSL::SSLConnection ssl = nullptr;
 #endif
 
     /**
@@ -46,6 +46,8 @@ class SSLSocket : public Socket
      * @param type The type of socket to create (TCP or UDP)
      */
     explicit SSLSocket(Type type);
+
+    using Socket::create;
 
     virtual void create(SocketHandle handle) override;
 

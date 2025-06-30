@@ -35,7 +35,7 @@ class TCPClientSocket : public Socket
      * @brief Destroy the TCPClientSocket object
      * @note Automatically disconnects if still connected
      */
-    ~TCPClientSocket();
+    virtual ~TCPClientSocket();
 
     /**
      * @brief Get the remote server's IP address
@@ -67,19 +67,21 @@ class TCPClientSocket : public Socket
      *       - Restores original blocking mode
      * @warning Timeout precision depends on system scheduler
      */
-    [[nodiscard]] Status connect(IPAddress remote_address, unsigned short remote_port, unsigned int timeout_ms = 0);
+    [[nodiscard]] virtual Status connect(IPAddress remote_address, unsigned short remote_port,
+                                         unsigned int timeout_ms = 0);
 
     /**
      * @brief Disconnect from the remote server
      * @post Closes the socket and resets connection state
      * @note Safe to call on already disconnected sockets
      */
-    void disconnect();
+    virtual void disconnect();
 
     /**
      * @brief Send data to the remote server
      * @param data Pointer to data buffer
      * @param size Size of data in bytes
+     * @param timeout_ms Timeout in milliseconds (blocking mode)
      * @return Status Transmission result:
      *         - Status::Ready: All data sent
      *         - Status::Partial: Partial data sent (non-blocking mode)
@@ -88,13 +90,14 @@ class TCPClientSocket : public Socket
      * @warning In non-blocking mode, prints warning about partial sends
      * @note For better partial send handling, use send() with 'sent' parameter
      */
-    [[nodiscard]] Status send(const void *data, size_t size);
+    [[nodiscard]] virtual Status send(const void *data, size_t size, const unsigned int timeout_ms = 0);
 
     /**
      * @brief Send data to the remote server with progress tracking
      * @param data Pointer to data buffer
      * @param size Size of data in bytes
      * @param sent [out] Actual number of bytes sent
+     * @param timeout_ms Timeout in milliseconds (blocking mode)
      * @return Status Transmission result:
      *         - Status::Ready: All data sent
      *         - Status::Partial: Partial data sent (non-blocking mode)
@@ -103,22 +106,23 @@ class TCPClientSocket : public Socket
      * @note Implements send loop for partial transmissions
      * @warning Buffer must remain valid during entire send operation
      */
-    [[nodiscard]] Status send(const void *data, size_t size, size_t &sent);
+    [[nodiscard]] virtual Status send(const void *data, size_t size, size_t &sent, const unsigned int timeout_ms = 0);
 
     /**
      * @brief Receive data from the remote server
      * @param data Pointer to receive buffer
      * @param size Maximum bytes to receive
      * @param received [out] Actual number of bytes received
+     * @param timeout_ms Timeout in milliseconds (blocking mode)
      * @return Status Reception result:
      *         - Status::Ready: Data received
      *         - Status::Disconnected: Remote closed connection
      *         - Status::Error: Receive error
-     *         - Status::Blocked: No data available (non-blocking mode)
+     *         - Status::WouldBlock: No data available (non-blocking mode)
      *
      * @note Single call to recv(), may need multiple calls for complete message
      */
-    [[nodiscard]] Status recv(void *data, size_t size, size_t &received);
+    [[nodiscard]] virtual Status recv(void *data, size_t size, size_t &received, const unsigned int timeout_ms = 0);
 
     using Socket::close;
     using Socket::create;

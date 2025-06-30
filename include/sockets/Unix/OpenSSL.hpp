@@ -15,9 +15,10 @@ namespace sck
 
 struct OpenSSL
 {
-    using SSLContext = SSL_CTX *;
     using SSLMethod = const SSL_METHOD *;
-    using SSL = SSL *;
+    using SSLContext = SSL_CTX *;
+    using SSLConnection = SSL *;
+    using SSLStatus = unsigned long;
 
     OpenSSL()
     {
@@ -46,26 +47,34 @@ struct OpenSSL
         SSLContext ctx = SSL_CTX_new(meth);
 
         if (!ctx)
+        {
             ERR_print_errors_fp(stderr);
+            ctx = nullptr;
+        }
+
+        SSL_CTX_set_mode(ctx, SSL_MODE_ENABLE_PARTIAL_WRITE); // Enable partial sends
 
         return ctx;
     }
 
-    static SSL create(SSLContext ctx)
+    static SSLConnection createConnection(SSLContext ctx)
     {
-        assert(ctx && "Cannot initialize SSL because context is invalid");
+        assert(ctx && "Cannot initialize a SSL connection because context is invalid");
 
         singleton();
 
-        SSL ssl = SSL_new(ctx);
+        SSLConnection ssl = SSL_new(ctx);
 
         if (!ssl)
+        {
             ERR_print_errors_fp(stderr);
+            ssl = nullptr;
+        }
 
         return ssl;
     }
 
-    static void destroy(SSL ssl, SSLContext ctx)
+    static void destroySSLConnection(SSLConnection ssl)
     {
         singleton();
 
@@ -74,47 +83,154 @@ struct OpenSSL
             SSL_shutdown(ssl);
             SSL_free(ssl);
         }
+    }
+
+    static void destroySSLContext(SSLContext ctx)
+    {
+        singleton();
+
         if (ctx)
         {
             SSL_CTX_free(ctx);
         }
     }
 
-    static void setSSLSocket(SSL ssl, SocketHandle socket)
+    static void setSSLConnectionSocket(SSLConnection ssl, SocketHandle socket)
     {
-        assert(ssl && "Cannot associate SSL to socket because SSL handle is invalid");
-        assert((socket != -1) && "Cannot associate SSL to socket because socket is invalid");
+        assert(ssl && "Cannot associate SSL connection to socket because SSL handle is invalid");
+        assert((socket != -1) && "Cannot associate SSL connection to socket because socket is invalid");
 
         singleton();
         SSL_set_fd(ssl, socket);
     }
 
-    static void connect(SSL ssl)
+    [[nodiscard]] static bool connect(SSLConnection ssl)
     {
-        assert(ssl && "Cannot connect because SSL handle is invalid");
+        assert(ssl && "Cannot connect because SSL connection is invalid");
 
         singleton();
 
-        if (SSL_connect(ssl) <= 0)
-            ERR_print_errors_fp(stderr);
+        SSLStatus status;
+
+        // While no fatal error
+        while ((status = SSL_connect(ssl)) != -1)
+        {
+            switch (status)
+            {
+            case SSL_ERROR_WANT_READ:
+                waitRead(ssl);
+                continue;
+            case SSL_ERROR_WANT_WRITE:
+                waitWrite(ssl);
+                continue;
+            case SSL_ERROR_ZERO_RETURN:
+            case SSL_ERROR_SYSCALL:
+            case SSL_ERROR_SSL:
+                ERR_print_errors_fp(stderr);
+                return false;
+            }
+        }
+
+        return true;
     }
 
-    static void accept(SSL ssl)
+    static bool accept(SSLConnection ssl)
     {
-        assert(ssl && "Cannot accept because SSL handle is invalid");
+        assert(ssl && "Cannot accept because SSL connection is invalid");
 
         singleton();
 
-        if (SSL_accept(ssl) <= 0)
-            ERR_print_errors_fp(stderr);
+        int ret;
+
+        // While no fatal error
+        while ((ret = SSL_accept(ssl)) != -1)
+        {
+            switch (ret)
+            {
+            case SSL_ERROR_WANT_READ:
+                waitRead(ssl);
+                continue;
+            case SSL_ERROR_WANT_WRITE:
+                waitWrite(ssl);
+                continue;
+            case SSL_ERROR_ZERO_RETURN:
+            case SSL_ERROR_SYSCALL:
+            case SSL_ERROR_SSL:
+                ERR_print_errors_fp(stderr);
+                return false;
+            }
+        }
+
+        return true;
     }
 
-    static const char *getCipher(SSL ssl)
+    static int write(SSLConnection ssl, const void *data, const size_t size, size_t &written)
     {
-        assert(ssl && "Cannot get cipher name because SSL handle is invalid");
+        assert(ssl && "Cannot get cipher name because SSL connection is invalid");
+        assert(data && "Cannot write data because the data pointer is invalid");
+        assert(size && "Cannot write data because the size is zero");
+
+        return SSL_write_ex(ssl, data, size, &written);
+    }
+
+    static int read(SSLConnection ssl, void *const buf, const size_t size, size_t &read)
+    {
+        assert(ssl && "Cannot get cipher name because SSL connection is invalid");
+        assert(buf && "Cannot read data because the buffer pointer is invalid");
+        assert(size && "Cannot read data because the size is zero");
+
+        return SSL_read_ex(ssl, buf, size, &read);
+    }
+
+    static int waitWrite(SSLConnection ssl, unsigned int timeout_ms = 0)
+    {
+        fd_set fds;
+        int width, sock;
+
+        // Get hold of the underlying file descriptor for the socket
+        sock = SSL_get_fd(ssl);
+
+        FD_ZERO(&fds);
+        FD_SET(sock, &fds);
+        width = sock + 1;
+
+        timeval time = {};
+        time.tv_sec = static_cast<time_t>(timeout_ms / 1000);
+        time.tv_usec = 0;
+
+        return select(width, nullptr, &fds, nullptr, &time);
+    }
+
+    static int waitRead(SSLConnection ssl, unsigned int timeout_ms = 0)
+    {
+        fd_set fds;
+        int width, sock;
+
+        // Get hold of the underlying file descriptor for the socket
+        sock = SSL_get_fd(ssl);
+
+        FD_ZERO(&fds);
+        FD_SET(sock, &fds);
+        width = sock + 1;
+
+        timeval time = {};
+        time.tv_sec = static_cast<time_t>(timeout_ms / 1000);
+        time.tv_usec = 0;
+
+        return select(width, &fds, nullptr, nullptr, &time);
+    }
+
+    static const char *getCipher(SSLConnection ssl)
+    {
+        assert(ssl && "Cannot get cipher name because SSL connection is invalid");
 
         singleton();
         return SSL_get_cipher(ssl);
+    }
+
+    static SSLStatus getErrorStatus()
+    {
+        return ERR_get_error();
     }
 };
 

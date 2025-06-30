@@ -69,6 +69,7 @@ Socket::Status TCPClientSocket::connect(IPAddress remote_address, unsigned short
     if (was_blocking)
         setBlocking(false);
 
+    // Instantaneous connection
     if (::connect(getSystemHandle(), reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) >= 0)
     {
         setBlocking(was_blocking);
@@ -80,17 +81,13 @@ Socket::Status TCPClientSocket::connect(IPAddress remote_address, unsigned short
     if (!was_blocking)
         return status;
 
-    if (status == Status::Blocked)
+    if (status == Status::WouldBlock)
     {
-        fd_set selector;
-        FD_ZERO(&selector);
-        FD_SET(getSystemHandle(), &selector);
-
-        timeval time = {};
-        time.tv_sec = timeout_ms / 1000;
-        time.tv_usec = 0;
-
-        if (select(static_cast<int>(getSystemHandle() + 1), nullptr, &selector, nullptr, &time) > 0)
+        if (impl::SocketImpl::waitWrite(getSystemHandle(), timeout_ms) <= 0)
+        {
+            status = impl::SocketImpl::getErrorStatus();
+        }
+        else
         {
             if (getRemoteAddress().has_value())
             {
@@ -100,10 +97,6 @@ Socket::Status TCPClientSocket::connect(IPAddress remote_address, unsigned short
             {
                 status = impl::SocketImpl::getErrorStatus();
             }
-        }
-        else
-        {
-            status = impl::SocketImpl::getErrorStatus();
         }
     }
 
@@ -117,40 +110,64 @@ void TCPClientSocket::disconnect()
     close();
 }
 
-Socket::Status TCPClientSocket::send(const void *data, size_t size)
+Socket::Status TCPClientSocket::send(const void *data, size_t size, const unsigned int timeout_ms)
 {
     if (!isBlocking())
     {
-        std::cerr << "WARNING: Partial sends might not be handled properly" << std::endl;
+        std::cerr << "Caution: Non-blocking mode may require handling partial sends manually" << std::endl;
     }
 
     size_t sent = 0;
-    return send(data, size, sent);
+    return send(data, size, sent, timeout_ms);
 }
 
-Socket::Status TCPClientSocket::send(const void *data, size_t size, size_t &sent)
+Socket::Status TCPClientSocket::send(const void *data, size_t size, size_t &sent, const unsigned int timeout_ms)
 {
     if (!data || size == 0)
     {
-        std::cerr << "Failed to send data because there is no data to send" << std::endl;
+        std::cerr << "Failed to send data: No data or invalid buffer." << std::endl;
         return Status::Error;
     }
 
-    size_t bytes_sent = 0;
+    sent = 0;
+    ssize_t bytes_sent = 0;
 
-    for (sent = 0; sent < size; sent += bytes_sent)
+    while (sent < size)
     {
         bytes_sent = ::send(getSystemHandle(), reinterpret_cast<const char *>(data) + sent, size - sent, flags);
 
-        if (bytes_sent < 0)
+        if (bytes_sent > 0)
+        {
+            sent += bytes_sent;
+        }
+        else if (bytes_sent == 0)
+        {
+            // Peer closed the connection during send.
+            return Status::Disconnected;
+        }
+        else // bytes_sent < 0 (error)
         {
             const Status status = impl::SocketImpl::getErrorStatus();
 
-            if ((status == Status::Blocked) && (sent > 0))
+            if (status == Status::WouldBlock)
             {
-                return Status::Partial;
+                if (isBlocking())
+                {
+                    if (impl::SocketImpl::waitWrite(getSystemHandle(), timeout_ms) <= 0)
+                    {
+                        return impl::SocketImpl::getErrorStatus();
+                    }
+
+                    continue;
+                }
+                else
+                {
+                    // Non-blocking mode: Return Partial if some data was sent.
+                    return (sent > 0) ? Status::Partial : impl::SocketImpl::getErrorStatus();
+                }
             }
 
+            // Other errors (e.g., ConnectionReset, InvalidSocket).
             return status;
         }
     }
@@ -158,30 +175,50 @@ Socket::Status TCPClientSocket::send(const void *data, size_t size, size_t &sent
     return Status::Ready;
 }
 
-Socket::Status TCPClientSocket::recv(void *data, size_t size, size_t &received)
+Socket::Status TCPClientSocket::recv(void *data, size_t size, size_t &received, const unsigned int timeout_ms)
 {
     received = 0;
 
-    if (!data)
+    if (!data || size == 0)
     {
-        std::cerr << "Failed to receive data: Destination buffer is invalid" << std::endl;
+        std::cerr << "Failed to receive data: Invalid buffer or size" << std::endl;
         return Status::Error;
     }
 
-    const size_t bytes_received = ::recv(getSystemHandle(), static_cast<char *>(data), size, flags);
-
-    if (bytes_received > 0)
+    while (received < size)
     {
-        received = bytes_received;
-        return Status::Ready;
+        const ssize_t bytes_received =
+            ::recv(getSystemHandle(), static_cast<char *>(data) + received, size - received, flags);
+
+        if (bytes_received > 0)
+        {
+            received += bytes_received;
+        }
+        else if (bytes_received == 0)
+        {
+            return Status::Disconnected; // Peer shutdown
+        }
+        else
+        {
+            const Status status = impl::SocketImpl::getErrorStatus();
+
+            if (status == Status::WouldBlock)
+            {
+                if (isBlocking())
+                {
+                    continue; // Retry in blocking mode
+                }
+                else
+                {
+                    return (received > 0) ? Status::Partial : impl::SocketImpl::getErrorStatus();
+                }
+            }
+
+            return status; // Other errors
+        }
     }
 
-    if (bytes_received == 0)
-    {
-        return Socket::Status::Disconnected;
-    }
-
-    return impl::SocketImpl::getErrorStatus();
+    return Status::Ready;
 }
 
 } // namespace sck

@@ -19,8 +19,10 @@ void SSLSocket::create(SocketHandle handle)
         this->handle = handle;
         setBlocking(blocking);
 
-        ctx = OpenSSL::createContext(TLS_method());
-        ssl = OpenSSL::create(ctx);
+        OpenSSL::SSLMethod meth = TLS_method();
+        ctx = OpenSSL::createContext(meth);
+        ssl = OpenSSL::createConnection(ctx);
+        OpenSSL::setSSLConnectionSocket(ssl, getSystemHandle());
     }
 }
 
@@ -28,7 +30,9 @@ void SSLSocket::close()
 {
     if (impl::SocketImpl::isValidHandle(handle))
     {
-        OpenSSL::destroy(ssl, ctx);
+        OpenSSL::destroySSLConnection(ssl);
+        OpenSSL::destroySSLContext(ctx);
+
         impl::SocketImpl::close(handle);
         handle = impl::SocketImpl::InvalidHandle;
     }

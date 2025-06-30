@@ -89,6 +89,10 @@ class SocketImpl
      */
     static void setBlocking(SocketHandle handle, const bool blocking);
 
+    static int waitRead(SocketHandle handle, const unsigned int timeout_ms = 0);
+
+    static int waitWrite(SocketHandle handle, const unsigned int timeout_ms = 0);
+
     /**
      * @brief Gets the status corresponding to the last socket error
      *
