@@ -14,6 +14,19 @@ class SSLTCPClientSocket : public SSLSocket
 
     ~SSLTCPClientSocket();
 
+    /**
+     * @brief Move constructor
+     * @param socket The socket to move from
+     */
+    SSLTCPClientSocket(SSLTCPClientSocket &&socket) noexcept = default;
+
+    /**
+     * @brief Move assignment operator
+     * @param socket The socket to move from
+     * @return Reference to this socket
+     */
+    SSLTCPClientSocket &operator=(SSLTCPClientSocket &&socket) noexcept = default;
+
     [[nodiscard]] std::optional<IPAddress> getRemoteAddress() const;
 
     [[nodiscard]] unsigned short getRemotePort() const;

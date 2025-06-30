@@ -2,7 +2,9 @@
 
 #include "sockets/IPAddress.hpp"
 
-TEST(IPAddressTest, TypeTraits)
+#define TEST_NAME IPAddressTest
+
+TEST(TEST_NAME, TypeTraits)
 {
     ASSERT_TRUE(std::is_constructible_v<sck::IPAddress>);
     ASSERT_TRUE(std::is_copy_constructible_v<sck::IPAddress>);
@@ -11,7 +13,7 @@ TEST(IPAddressTest, TypeTraits)
     ASSERT_TRUE(std::is_nothrow_move_assignable_v<sck::IPAddress>);
 }
 
-TEST(IPAddressTest, Constants)
+TEST(TEST_NAME, Constants)
 {
     // Any IP
     ASSERT_EQ(sck::IPAddress::Any.toString(), "0.0.0.0");
@@ -26,14 +28,14 @@ TEST(IPAddressTest, Constants)
     ASSERT_EQ(sck::IPAddress::Broadcast.toInteger(), 4294967295);
 }
 
-TEST(IPAddressTest, Instantiation)
+TEST(TEST_NAME, Instantiation)
 {
     const sck::IPAddress address;
 
     EXPECT_TRUE(address == sck::IPAddress::Invalid);
 }
 
-TEST(IPAddressTest, IPAddressResolution)
+TEST(TEST_NAME, IPAddressResolution)
 {
     // LocalHost resolution
     const sck::IPAddress localhost("127.0.0.1");
@@ -44,7 +46,7 @@ TEST(IPAddressTest, IPAddressResolution)
     EXPECT_TRUE(broadcast == sck::IPAddress::Broadcast);
 }
 
-TEST(IPAddressTest, HostnameResolution)
+TEST(TEST_NAME, HostnameResolution)
 {
     // Test for Google Domain Name
     const sck::IPAddress google_address("www.gnu.org");
@@ -55,7 +57,7 @@ TEST(IPAddressTest, HostnameResolution)
     EXPECT_TRUE(localhost_address.toString() == sck::IPAddress::LocalHost.toString());
 }
 
-TEST(IPAddressTest, EqualityComparison)
+TEST(TEST_NAME, EqualityComparison)
 {
     sck::IPAddress first("127.0.0.1");
     sck::IPAddress second("localhost");
@@ -64,7 +66,7 @@ TEST(IPAddressTest, EqualityComparison)
     EXPECT_TRUE(second == first);
 }
 
-TEST(IPAddressTest, InequalityComparison)
+TEST(TEST_NAME, InequalityComparison)
 {
     sck::IPAddress first("127.0.0.1");
     sck::IPAddress second("192.168.100.1");
@@ -73,7 +75,7 @@ TEST(IPAddressTest, InequalityComparison)
     EXPECT_TRUE(second != first);
 }
 
-TEST(IPAddressTest, ConstructorCopySemantics)
+TEST(TEST_NAME, ConstructorCopySemantics)
 {
     sck::IPAddress address("www.gnu.org");
 
@@ -82,7 +84,7 @@ TEST(IPAddressTest, ConstructorCopySemantics)
     EXPECT_TRUE(address == copy);
 }
 
-TEST(IPAddressTest, AssignmentCopySemantics)
+TEST(TEST_NAME, AssignmentCopySemantics)
 {
     sck::IPAddress address("www.gnu.org");
 
@@ -91,7 +93,7 @@ TEST(IPAddressTest, AssignmentCopySemantics)
     EXPECT_TRUE(address == copy);
 }
 
-TEST(IPAddressTest, ConstructorMoveSemantics)
+TEST(TEST_NAME, ConstructorMoveSemantics)
 {
     sck::IPAddress r_address("www.gnu.org");
 
@@ -102,7 +104,7 @@ TEST(IPAddressTest, ConstructorMoveSemantics)
     EXPECT_TRUE(l_address == r_address_copy);
 }
 
-TEST(IPAddressTest, AssignmentMoveSemantics)
+TEST(TEST_NAME, AssignmentMoveSemantics)
 {
     sck::IPAddress r_address("www.gnu.org");
 

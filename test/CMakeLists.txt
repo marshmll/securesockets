@@ -12,6 +12,10 @@ FetchContent_MakeAvailable(googletest)
 
 enable_testing()
 
+add_executable(IPAddressTest IPAddressTest.cpp)
+target_include_directories(IPAddressTest PRIVATE ../include)
+target_link_libraries(IPAddressTest PRIVATE GTest::gtest_main sockets)
+
 add_executable(SocketTest SocketTest.cpp)
 target_include_directories(SocketTest PRIVATE ../include)
 target_link_libraries(SocketTest PRIVATE GTest::gtest_main sockets)
@@ -20,13 +24,14 @@ add_executable(UDPSocketTest UDPSocketTest.cpp)
 target_include_directories(UDPSocketTest PRIVATE ../include)
 target_link_libraries(UDPSocketTest PRIVATE GTest::gtest_main sockets)
 
-add_executable(IPAddressTest IPAddressTest.cpp)
-target_include_directories(IPAddressTest PRIVATE ../include)
-target_link_libraries(IPAddressTest PRIVATE GTest::gtest_main sockets)
+add_executable(SSLTCPClientSocketTest SSLTCPClientSocketTest.cpp)
+target_include_directories(SSLTCPClientSocketTest PRIVATE ../include)
+target_link_libraries(SSLTCPClientSocketTest PRIVATE GTest::gtest_main sockets)
 
 include(GoogleTest)
+gtest_discover_tests(IPAddressTest)
 gtest_discover_tests(SocketTest)
 gtest_discover_tests(UDPSocketTest)
-gtest_discover_tests(IPAddressTest)
+gtest_discover_tests(SSLTCPClientSocketTest)
 
 endif()

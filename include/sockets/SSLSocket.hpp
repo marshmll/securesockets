@@ -26,14 +26,14 @@ class SSLSocket : public Socket
      * @brief Move constructor
      * @param socket The socket to move from
      */
-    SSLSocket(SSLSocket &&socket) noexcept = default;
+    SSLSocket(SSLSocket &&socket) noexcept;
 
     /**
      * @brief Move assignment operator
      * @param socket The socket to move from
      * @return Reference to this socket
      */
-    SSLSocket &operator=(SSLSocket &&socket) noexcept = default;
+    SSLSocket &operator=(SSLSocket &&socket) noexcept;
 
   protected:
 #ifdef __unix__

@@ -10,6 +10,10 @@ Socket::Socket(Type type) : type(type), handle(impl::SocketImpl::InvalidHandle),
 {
 }
 
+Socket::Socket(Type type, SocketHandle handle, bool blocking) : type(type), handle(handle), blocking(blocking)
+{
+}
+
 Socket::~Socket()
 {
     close();
@@ -17,6 +21,7 @@ Socket::~Socket()
 
 Socket::Socket(Socket &&socket) noexcept : type(socket.type), handle(socket.handle), blocking(socket.blocking)
 {
+    socket.handle = impl::SocketImpl::InvalidHandle;
 }
 
 Socket &Socket::operator=(Socket &&socket) noexcept

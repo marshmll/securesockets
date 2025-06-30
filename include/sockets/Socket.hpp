@@ -93,6 +93,12 @@ class Socket
      */
     explicit Socket(Type type);
 
+     /**
+     * @brief Constructs a socket of the specified type
+     * @param type The type of socket to create (TCP or UDP)
+     */
+    explicit Socket(Type type, SocketHandle handle, bool blocking);
+
     /**
      * @brief Gets the underlying system socket handle
      * @return The native socket handle

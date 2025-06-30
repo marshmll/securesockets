@@ -1,39 +1,34 @@
 #include <gtest/gtest.h>
 
-#include "sockets/Socket.hpp"
-#include "sockets/SocketImpl.hpp"
+#include <sockets/SSLTCPClientSocket.hpp>
 
-#define TEST_NAME SocketTest
+#define TEST_NAME SSLTCPClientSocketTest
 
-class TestingSocket : public sck::Socket
+class TestingSocket : public sck::SSLTCPClientSocket
 {
   public:
-    TestingSocket() : sck::Socket(sck::Socket::Type::UDP) {};
+    TestingSocket() : sck::SSLTCPClientSocket() {};
 
-    using sck::Socket::close;
-    using sck::Socket::create;
-    using sck::Socket::getSystemHandle;
+    using sck::SSLSocket::close;
+    using sck::SSLSocket::create;
+    using sck::SSLSocket::getSystemHandle;
 };
 
 static const sck::SocketHandle invalidHandle = sck::impl::SocketImpl::InvalidHandle;
 
 TEST(TEST_NAME, TypeTraits)
 {
-    ASSERT_FALSE(std::is_constructible_v<sck::Socket>);
-    ASSERT_FALSE(std::is_copy_constructible_v<sck::Socket>);
-    ASSERT_FALSE(std::is_copy_assignable_v<sck::Socket>);
-    ASSERT_TRUE(std::is_nothrow_move_constructible_v<sck::Socket>);
-    ASSERT_TRUE(std::is_nothrow_move_assignable_v<sck::Socket>);
-}
-
-TEST(TEST_NAME, Constants)
-{
-    ASSERT_EQ(sck::Socket::RandomPort, 0);
+    ASSERT_TRUE(std::is_constructible_v<sck::SSLTCPClientSocket>);
+    ASSERT_FALSE(std::is_copy_constructible_v<sck::SSLTCPClientSocket>);
+    ASSERT_FALSE(std::is_copy_assignable_v<sck::SSLTCPClientSocket>);
+    ASSERT_TRUE(std::is_nothrow_move_constructible_v<sck::SSLTCPClientSocket>);
+    ASSERT_TRUE(std::is_nothrow_move_assignable_v<sck::SSLTCPClientSocket>);
 }
 
 TEST(TEST_NAME, Instantiation)
 {
-    const TestingSocket socket;
+    TestingSocket socket;
+
     EXPECT_TRUE(socket.isBlocking());
     EXPECT_EQ(socket.getSystemHandle(), invalidHandle);
 }
