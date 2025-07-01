@@ -12,7 +12,7 @@ sockaddr_in impl::SocketImpl::createAddress(const uint32_t addr, const unsigned 
     sockaddr_in sa = {};
     memset(&sa, 0, sizeof(sa));
 
-    sa.sin_addr.s_addr = htonl(addr);
+    sa.sin_addr.s_addr = addr;
     sa.sin_family = AF_INET;
     sa.sin_port = htons(port);
 
@@ -41,7 +41,7 @@ void impl::SocketImpl::setBlocking(SocketHandle handle, const bool blocking)
     ioctlsocket(handle, static_cast<long>(FIONBIO), &block);
 }
 
-Socket::Status impl::SocketImpl::getErrorStatus()
+Socket::Status impl::SocketImpl::getLastStatus()
 {
     WinSock2::instance();
 
@@ -62,7 +62,7 @@ Socket::Status impl::SocketImpl::getErrorStatus()
     case WSAENOTCONN:
         return Socket::Status::Disconnected;
     case WSAEISCONN:
-        return Socket::Status::Ready;
+        return Socket::Status::Good;
     default:
         return Socket::Status::Error;
     }

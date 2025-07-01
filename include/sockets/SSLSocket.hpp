@@ -47,6 +47,12 @@ class SSLSocket : public Socket
      */
     explicit SSLSocket(Type type);
 
+#ifdef __unix__
+    [[nodiscard]] const OpenSSL::SSLContext getSSLContext() const;
+
+    [[nodiscard]] const OpenSSL::SSLConnection getSSLConnection() const;
+#endif
+
     using Socket::create;
 
     virtual void create(SocketHandle handle) override;

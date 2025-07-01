@@ -71,6 +71,34 @@ bool Socket::isBlocking() const
     return blocking;
 }
 
+Socket::Status Socket::getLastStatus() const
+{
+    return impl::SocketImpl::getLastStatus();
+}
+
+std::string Socket::getStatusMessage(const Status status)
+{
+    switch (status)
+    {
+        // clang-format off
+    case Status::Good:              return "No error";
+    case Status::Partial:           return "Partial transfer completed";
+    case Status::Again:             return "Resource temporarily unavailable";
+    case Status::WouldBlock:        return "Operation would block";
+    case Status::InProgress:        return "Operation in progress";
+    case Status::ConnectionAborted: return "Connection aborted";
+    case Status::ConnectionReset:   return "Connection reset by peer";
+    case Status::Timeout:           return "Operation timed out";
+    case Status::NetworkReset:      return "Network dropped connection";
+    case Status::NotConnected:      return "Socket is not connected";
+    case Status::ConnectionRefused: return "Connection refused";
+    case Status::PipeError:         return "Broken pipe";
+    case Status::Error:             return "General socket error";
+    default:                        return "Unknown error status";
+        // clang-format on
+    }
+}
+
 SocketHandle Socket::getSystemHandle() const
 {
     return handle;

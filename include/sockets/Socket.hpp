@@ -3,6 +3,7 @@
 #include "sockets/SocketHandle.hpp"
 
 #include <cstring>
+#include <string>
 
 namespace sck
 {
@@ -23,12 +24,19 @@ class Socket
      */
     enum class Status
     {
-        Ready,        ///< Operation completed successfully
-        WouldBlock,   ///< Operation would block (non-blocking mode only)
-        Partial,      ///< Partial data was sent/received
-        Disconnected, ///< The remote host closed the connection
-        Error,        ///< An unexpected error occurred
-        SSLError      ///< An SSL related error occurred
+        Good,
+        Partial,
+        Again,
+        WouldBlock,
+        InProgress,
+        ConnectionAborted,
+        ConnectionReset,
+        Timeout,
+        NetworkReset,
+        NotConnected,
+        ConnectionRefused,
+        PipeError,
+        Error
     };
 
     /**
@@ -76,6 +84,10 @@ class Socket
      */
     [[nodiscard]] bool isBlocking() const;
 
+    [[nodiscard]] Status getLastStatus() const;
+    
+    [[nodiscard]] static std::string getStatusMessage(const Status status);
+
   protected:
     /**
      * @enum Type
@@ -93,7 +105,7 @@ class Socket
      */
     explicit Socket(Type type);
 
-     /**
+    /**
      * @brief Constructs a socket of the specified type
      * @param type The type of socket to create (TCP or UDP)
      */

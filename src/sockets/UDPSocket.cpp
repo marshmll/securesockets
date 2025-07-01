@@ -29,7 +29,7 @@ Socket::Status UDPSocket::bind(const unsigned short port, const IPAddress &addre
         std::cerr << "Failed to bind UDP socket to port: " << port << std::endl;
     }
 
-    return Status::Ready;
+    return Status::Good;
 }
 
 void UDPSocket::unbind()
@@ -55,9 +55,9 @@ Socket::Status UDPSocket::send(const void *data, const size_t size, const IPAddr
                           reinterpret_cast<sockaddr *>(&addr), sizeof(addr));
 
     if (sent == -1)
-        return impl::SocketImpl::getErrorStatus();
+        return impl::SocketImpl::getLastStatus();
 
-    return Status::Ready;
+    return Status::Good;
 }
 
 Socket::Status UDPSocket::recv(void *const buf, const size_t size, size_t &received, IPAddress &remote_address,
@@ -82,7 +82,7 @@ Socket::Status UDPSocket::recv(void *const buf, const size_t size, size_t &recei
     remote_address = IPAddress(ntohl(addr.sin_addr.s_addr));
     remote_port = addr.sin_port;
 
-    return Status::Ready;
+    return Status::Good;
 }
 
 } // namespace sck

@@ -39,7 +39,7 @@ struct OpenSSL
         return ssl;
     }
 
-    static SSLContext createContext(SSLMethod meth)
+    static SSLContext createContext(SSLMethod &meth)
     {
         assert(meth && "Cannot create SSL context because method is invalid");
 
@@ -57,7 +57,7 @@ struct OpenSSL
         return ctx;
     }
 
-    static SSLConnection createConnection(SSLContext ctx)
+    static SSLConnection createConnection(SSLContext &ctx)
     {
         assert(ctx && "Cannot initialize a SSL connection because context is invalid");
 
@@ -74,7 +74,7 @@ struct OpenSSL
         return ssl;
     }
 
-    static void destroySSLConnection(SSLConnection ssl)
+    static void destroySSLConnection(SSLConnection &ssl) noexcept
     {
         singleton();
 
@@ -85,7 +85,7 @@ struct OpenSSL
         }
     }
 
-    static void destroySSLContext(SSLContext ctx)
+    static void destroySSLContext(SSLContext &ctx) noexcept
     {
         singleton();
 
@@ -95,7 +95,7 @@ struct OpenSSL
         }
     }
 
-    static void setSSLConnectionSocket(SSLConnection ssl, SocketHandle socket)
+    static void setSSLConnectionSocket(SSLConnection &ssl, SocketHandle socket)
     {
         assert(ssl && "Cannot associate SSL connection to socket because SSL handle is invalid");
         assert((socket != -1) && "Cannot associate SSL connection to socket because socket is invalid");
@@ -104,67 +104,79 @@ struct OpenSSL
         SSL_set_fd(ssl, socket);
     }
 
-    [[nodiscard]] static bool connect(SSLConnection ssl)
+    [[nodiscard]] static bool connect(SSLConnection &ssl)
     {
         assert(ssl && "Cannot connect because SSL connection is invalid");
-
-        singleton();
-
-        SSLStatus status;
-
-        // While no fatal error
-        while ((status = SSL_connect(ssl)) != -1)
-        {
-            switch (status)
-            {
-            case SSL_ERROR_WANT_READ:
-                waitRead(ssl);
-                continue;
-            case SSL_ERROR_WANT_WRITE:
-                waitWrite(ssl);
-                continue;
-            case SSL_ERROR_ZERO_RETURN:
-            case SSL_ERROR_SYSCALL:
-            case SSL_ERROR_SSL:
-                ERR_print_errors_fp(stderr);
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    static bool accept(SSLConnection ssl)
-    {
-        assert(ssl && "Cannot accept because SSL connection is invalid");
-
         singleton();
 
         int ret;
-
-        // While no fatal error
-        while ((ret = SSL_accept(ssl)) != -1)
+        while ((ret = SSL_connect(ssl)) <= 0)
         {
-            switch (ret)
+            const int ssl_err = SSL_get_error(ssl, ret);
+
+            switch (ssl_err)
             {
             case SSL_ERROR_WANT_READ:
-                waitRead(ssl);
+                if (waitRead(ssl) <= 0)
+                    return false; // Timeout or error
                 continue;
+
             case SSL_ERROR_WANT_WRITE:
-                waitWrite(ssl);
+                if (waitWrite(ssl) <= 0)
+                    return false; // Timeout or error
                 continue;
+
             case SSL_ERROR_ZERO_RETURN:
             case SSL_ERROR_SYSCALL:
             case SSL_ERROR_SSL:
+            default:
                 ERR_print_errors_fp(stderr);
                 return false;
             }
         }
 
-        return true;
+        return true; // Only if SSL_connect returns 1
     }
 
-    static int write(SSLConnection ssl, const void *data, const size_t size, size_t &written)
+    [[nodiscard]] static bool accept(SSLConnection &ssl)
+    {
+        assert(ssl && "Cannot accept because SSL connection is invalid");
+        singleton();
+
+        int ret;
+        while ((ret = SSL_accept(ssl)) <= 0)
+        {
+            const int ssl_err = SSL_get_error(ssl, ret);
+
+            switch (ssl_err)
+            {
+            case SSL_ERROR_NONE:
+                // Should never happen with ret <= 0
+                break;
+
+            case SSL_ERROR_WANT_READ:
+                if (waitRead(ssl) <= 0)
+                    return false;
+                continue;
+
+            case SSL_ERROR_WANT_WRITE:
+                if (waitWrite(ssl) <= 0)
+                    return false;
+                continue;
+
+            case SSL_ERROR_ZERO_RETURN:
+            case SSL_ERROR_SYSCALL:
+            case SSL_ERROR_SSL:
+            default:
+                ERR_print_errors_fp(stderr);
+                return false;
+            }
+        }
+
+        return true; // Only if SSL_accept returns 1
+    }
+
+    static int write(SSLConnection &ssl, const void *data, const size_t size, size_t &written)
     {
         assert(ssl && "Cannot get cipher name because SSL connection is invalid");
         assert(data && "Cannot write data because the data pointer is invalid");
@@ -173,7 +185,7 @@ struct OpenSSL
         return SSL_write_ex(ssl, data, size, &written);
     }
 
-    static int read(SSLConnection ssl, void *const buf, const size_t size, size_t &read)
+    static int read(SSLConnection &ssl, void *const buf, const size_t size, size_t &read)
     {
         assert(ssl && "Cannot get cipher name because SSL connection is invalid");
         assert(buf && "Cannot read data because the buffer pointer is invalid");
@@ -182,45 +194,99 @@ struct OpenSSL
         return SSL_read_ex(ssl, buf, size, &read);
     }
 
-    static int waitWrite(SSLConnection ssl, unsigned int timeout_ms = 0)
+    [[nodiscard]] static int waitWrite(SSL *ssl, unsigned int timeout_ms = 0)
     {
-        fd_set fds;
-        int width, sock;
+        if (!ssl)
+        {
+            errno = EBADF;
+            return -1;
+        }
 
-        // Get hold of the underlying file descriptor for the socket
-        sock = SSL_get_fd(ssl);
+        const int sock = SSL_get_fd(ssl);
+        if (sock < 0)
+        {
+            errno = EBADF;
+            return -1;
+        }
 
-        FD_ZERO(&fds);
-        FD_SET(sock, &fds);
-        width = sock + 1;
+        fd_set write_fds;
+        FD_ZERO(&write_fds);
+        FD_SET(sock, &write_fds);
 
-        timeval time = {};
-        time.tv_sec = static_cast<time_t>(timeout_ms / 1000);
-        time.tv_usec = 0;
+        timeval timeout = {};
+        timeval *timeout_ptr = nullptr;
 
-        return select(width, nullptr, &fds, nullptr, &time);
+        if (timeout_ms > 0)
+        {
+            timeout.tv_sec = timeout_ms / 1000;
+            timeout.tv_usec = (timeout_ms % 1000) * 1000;
+            timeout_ptr = &timeout;
+        }
+
+        // Wait for write availability
+        const int result = select(sock + 1, nullptr, &write_fds, nullptr, timeout_ptr);
+
+        if (result < 0)
+        {
+            // Handle EINTR (interrupted system call)
+            if (errno == EINTR)
+            {
+                return 0; // Treat as timeout
+            }
+
+            return -1;
+        }
+
+        return result; // 1 if ready, 0 if timeout
     }
 
-    static int waitRead(SSLConnection ssl, unsigned int timeout_ms = 0)
+    [[nodiscard]] static int waitRead(SSL *ssl, unsigned int timeout_ms = 0)
     {
-        fd_set fds;
-        int width, sock;
+        if (!ssl)
+        {
+            errno = EBADF;
+            return -1;
+        }
 
-        // Get hold of the underlying file descriptor for the socket
-        sock = SSL_get_fd(ssl);
+        const int sock = SSL_get_fd(ssl);
+        if (sock < 0)
+        {
+            errno = EBADF;
+            return -1;
+        }
 
-        FD_ZERO(&fds);
-        FD_SET(sock, &fds);
-        width = sock + 1;
+        fd_set read_fds;
+        FD_ZERO(&read_fds);
+        FD_SET(sock, &read_fds);
 
-        timeval time = {};
-        time.tv_sec = static_cast<time_t>(timeout_ms / 1000);
-        time.tv_usec = 0;
+        timeval timeout = {};
+        timeval *timeout_ptr = nullptr;
 
-        return select(width, &fds, nullptr, nullptr, &time);
+        if (timeout_ms > 0)
+        {
+            timeout.tv_sec = timeout_ms / 1000;
+            timeout.tv_usec = (timeout_ms % 1000) * 1000;
+            timeout_ptr = &timeout;
+        }
+
+        // Wait for read availability
+        const int result = select(sock + 1, &read_fds, nullptr, nullptr, timeout_ptr);
+
+        if (result < 0)
+        {
+            // Handle EINTR (interrupted system call)
+            if (errno == EINTR)
+            {
+                return 0; // Treat as timeout
+            }
+
+            return -1;
+        }
+
+        return result; // 1 if ready, 0 if timeout
     }
 
-    static const char *getCipher(SSLConnection ssl)
+    static const char *getCipher(SSLConnection &ssl)
     {
         assert(ssl && "Cannot get cipher name because SSL connection is invalid");
 

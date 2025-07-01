@@ -19,15 +19,13 @@ set(SRC
 if(WIN32)
     list(APPEND SRC ./src/sockets/Windows/SocketImpl.cpp)
     list(APPEND SRC ./src/sockets/Windows/SSLSocketImpl.cpp)
-    list(APPEND SRC ./src/sockets/Windows/SSLTCPClientSocketImpl.cpp)
 else()
     list(APPEND SRC ./src/sockets/Unix/SocketImpl.cpp)
     list(APPEND SRC ./src/sockets/Unix/SSLSocketImpl.cpp)
-    list(APPEND SRC ./src/sockets/Unix/SSLTCPClientSocketImpl.cpp)
 endif()
 
 # Create the library
-add_library(sockets SHARED ${SRC})
+add_library(sockets STATIC ${SRC})
 
 add_subdirectory("./test")
 

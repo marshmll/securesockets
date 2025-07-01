@@ -73,6 +73,7 @@ class TCPServerSocket : public Socket
      * @warning Prints error messages to stderr on failure
      * @warning Blocks until a connection arrives (in blocking mode)
      */
-    [[nodiscard]] Status accept(TCPClientSocket &socket);
+    [[nodiscard]] Status accept(TCPClientSocket &socket, unsigned int timeout_ms = 0, IPAddress *peer_address = nullptr,
+                                unsigned short *peer_port = nullptr);
 };
 } // namespace sck

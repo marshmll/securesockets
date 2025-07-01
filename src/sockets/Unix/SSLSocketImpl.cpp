@@ -48,6 +48,16 @@ SSLSocket &SSLSocket::operator=(SSLSocket &&socket) noexcept
     return *this;
 }
 
+const OpenSSL::SSLContext SSLSocket::getSSLContext() const
+{
+    return ctx;
+}
+
+const OpenSSL::SSLConnection SSLSocket::getSSLConnection() const
+{
+    return ssl;
+}
+
 void SSLSocket::create(SocketHandle handle)
 {
     if (!impl::SocketImpl::isValidHandle(this->handle))
@@ -68,8 +78,10 @@ void SSLSocket::close()
     {
         OpenSSL::destroySSLConnection(ssl);
         OpenSSL::destroySSLContext(ctx);
-
         impl::SocketImpl::close(handle);
+
+        ssl = nullptr;
+        ctx = nullptr;
         handle = impl::SocketImpl::InvalidHandle;
     }
 }

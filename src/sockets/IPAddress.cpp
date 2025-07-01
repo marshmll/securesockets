@@ -5,50 +5,44 @@ namespace sck
 
 const char *IPAddress::InvalidIPString = "INVALID";
 
-const IPAddress IPAddress::Any(0);
+const IPAddress IPAddress::Any(INADDR_ANY);
 const IPAddress IPAddress::LocalHost("127.0.0.1");
 const IPAddress IPAddress::Broadcast("255.255.255.255");
 const IPAddress IPAddress::Invalid;
 
 IPAddress::IPAddress()
 {
-    initVariables();
+    clear();
 }
 
 IPAddress::IPAddress(const std::string &address)
 {
-    initVariables();
+    clear();
 
     auto resolution = IPAddress::resolve(address);
+    if (!resolution)
+    {
+        throw std::invalid_argument("Failed to resolve address: " + address);
+    }
 
-    if (resolution.has_value())
-    {
-        internetAddress = resolution->inAddress;
-        ipString = resolution->ipString;
-    }
-    else
-    {
-        std::cerr << "Failed to resolve address" << std::endl;
-    }
+    internetAddress = resolution->inAddress;
+    ipString = resolution->ipString;
 }
 
-IPAddress::IPAddress(const uint32_t address)
+IPAddress::IPAddress(uint32_t address)
 {
-    initVariables();
-
+    clear();
     internetAddress.s_addr = address;
 
-    if (address > 0)
+    char buffer[INET_ADDRSTRLEN];
+
+    if (inet_ntop(AF_INET, &internetAddress, buffer, sizeof(buffer)))
     {
-        if (inet_ntop(AF_INET, &internetAddress.s_addr, ipString.data(), ipString.size()) == NULL)
-        {
-            std::cerr << "Failed to convert Internet Address (" << address << ") to string: " << strerror(errno)
-                      << std::endl;
-        }
+        ipString = buffer;
     }
     else
     {
-        ipString = "0.0.0.0";
+        throw std::runtime_error("Failed to convert address to string: " + std::string(strerror(errno)));
     }
 }
 
@@ -62,87 +56,64 @@ const uint32_t IPAddress::toInteger() const
     return internetAddress.s_addr;
 }
 
-bool IPAddress::operator==(IPAddress other) const
+bool IPAddress::operator==(const IPAddress &other) const
 {
-    return this->ipString == other.ipString && this->internetAddress.s_addr == other.internetAddress.s_addr;
+    return internetAddress.s_addr == other.internetAddress.s_addr;
 }
 
-bool IPAddress::operator!=(IPAddress other) const
+bool IPAddress::operator!=(const IPAddress &other) const
 {
-    return this->ipString != other.ipString || this->internetAddress.s_addr != other.internetAddress.s_addr;
+    return !(*this == other);
 }
 
-std::optional<IPAddress::Resolution> IPAddress::resolve(const std::string hostname)
+std::optional<IPAddress::Resolution> IPAddress::resolve(const std::string &hostname)
 {
-    Resolution res = {};
-    memset(reinterpret_cast<void *>(&res), 0, sizeof(res));
+    Resolution res{};
 
-    if (inet_pton(AF_INET, hostname.c_str(), &res.inAddress.s_addr) == 1)
+    // First try to parse as dotted-decimal notation
+    if (inet_pton(AF_INET, hostname.c_str(), &res.inAddress) == 1)
     {
         res.ipString = hostname;
         return res;
     }
-    else
+
+    // If not an IP address, try DNS resolution
+    addrinfo hints{};
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = 0;
+    hints.ai_flags = AI_ADDRCONFIG;
+
+    addrinfo *result = nullptr;
+    if (getaddrinfo(hostname.c_str(), nullptr, &hints, &result) != 0)
     {
-        addrinfo hints = {};
-        memset(&hints, 0, sizeof(hints));
+        return std::nullopt;
+    }
 
-        hints.ai_family = AF_INET;
-        hints.ai_socktype = 0; // TCP or UDP
-
-        addrinfo *result = nullptr;
-        if (getaddrinfo(hostname.c_str(), NULL, &hints, &result) != 0)
+    // Take the first IPv4 address found
+    for (auto rp = result; rp != nullptr; rp = rp->ai_next)
+    {
+        if (rp->ai_family == AF_INET)
         {
-            std::cerr << "Invalid IP address or hostname: " << hostname << std::endl;
-            return std::nullopt;
-        }
-        else
-        {
-            addrinfo *rp;
+            auto ipv4 = reinterpret_cast<sockaddr_in *>(rp->ai_addr);
+            res.inAddress = ipv4->sin_addr;
 
-            for (rp = result; rp != NULL; rp = rp->ai_next)
+            char buffer[INET_ADDRSTRLEN];
+            if (inet_ntop(AF_INET, &res.inAddress, buffer, sizeof(buffer)))
             {
-                if (rp->ai_family == AF_INET)
-                {
-                    struct sockaddr_in *ipv4 = (struct sockaddr_in *)rp->ai_addr;
-
-                    auto str = IPAddress::convertInternetAddressToIpString(ipv4->sin_addr.s_addr);
-
-                    if (str)
-                    {
-                        res.inAddress = ipv4->sin_addr;
-                        res.ipString = *str;
-                        return res;
-                    }
-                    else
-                    {
-                        std::cerr << "Failed to convert Internet Address (" << ipv4->sin_addr.s_addr
-                                  << ") to string: " << strerror(errno) << std::endl;
-                    }
-                }
+                res.ipString = buffer;
+                freeaddrinfo(result);
+                return res;
             }
         }
     }
 
+    freeaddrinfo(result);
     return std::nullopt;
 }
 
-std::optional<std::string> IPAddress::convertInternetAddressToIpString(const uint32_t address)
+void IPAddress::clear()
 {
-    std::string str;
-    str.resize(INET_ADDRSTRLEN);
-
-    if (inet_ntop(AF_INET, &address, str.data(), str.size()) == NULL)
-        return std::nullopt;
-
-    str.resize(strlen(str.c_str())); // Remove unused space at end of string
-    return str;
-}
-
-void IPAddress::initVariables()
-{
-    memset(&internetAddress, 0, sizeof(internetAddress));
-    ipString.resize(INET_ADDRSTRLEN);
+    internetAddress.s_addr = INADDR_NONE;
     ipString = InvalidIPString;
 }
 

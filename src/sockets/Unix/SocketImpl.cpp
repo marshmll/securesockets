@@ -12,7 +12,7 @@ sockaddr_in SocketImpl::createAddress(const uint32_t addr, const unsigned short 
     sockaddr_in sa = {};
     memset(&sa, 0, sizeof(sa));
 
-    sa.sin_addr.s_addr = htonl(addr);
+    sa.sin_addr.s_addr = addr;
     sa.sin_family = AF_INET;
     sa.sin_port = htons(port);
 #ifdef __APPLE__
@@ -38,76 +38,119 @@ void SocketImpl::setBlocking(SocketHandle handle, const bool blocking)
 
     if (blocking)
     {
-        if (fcntl(handle, F_SETFL, flags | O_NONBLOCK) < 0)
+        if (fcntl(handle, F_SETFL, flags & ~O_NONBLOCK) < 0)
         {
-            std::cerr << "Failed to set socket to non-blocking mode" << std::endl;
+            std::cerr << "Failed to set socket to blocking mode" << std::endl;
         }
     }
     else
     {
-        if (fcntl(handle, F_SETFL, flags & ~O_NONBLOCK) < 0)
+        if (fcntl(handle, F_SETFL, flags | O_NONBLOCK) < 0)
         {
-            std::cerr << "Failed to set socket to blocking mode" << std::endl;
+            std::cerr << "Failed to set socket to non-blocking mode" << std::endl;
         }
     }
 }
 
 int SocketImpl::waitRead(SocketHandle handle, const unsigned int timeout_ms)
 {
-    fd_set fds;
-    int width;
+    fd_set read_fds;
+    FD_ZERO(&read_fds);
+    FD_SET(handle, &read_fds);
 
-    FD_ZERO(&fds);
-    FD_SET(handle, &fds);
-    width = handle + 1;
+    timeval timeout = {};
+    timeval *timeout_ptr = nullptr;
 
-    timeval time = {};
-    time.tv_sec = static_cast<time_t>(timeout_ms / 1000);
-    time.tv_usec = 0;
+    if (timeout_ms > 0)
+    {
+        timeout.tv_sec = timeout_ms / 1000;
+        timeout.tv_usec = (timeout_ms % 1000) * 1000;
+        timeout_ptr = &timeout;
+    }
 
-    return select(width, &fds, nullptr, nullptr, &time);
+    // Wait for read availability
+    const int result = select(handle + 1, &read_fds, nullptr, nullptr, timeout_ptr);
+
+    if (result < 0)
+    {
+        // Handle EINTR (interrupted system call)
+        if (errno == EINTR)
+        {
+            return 0; // Treat as timeout
+        }
+
+        return -1;
+    }
+
+    return result; // 1 if ready, 0 if timeout
 }
 
 int SocketImpl::waitWrite(SocketHandle handle, const unsigned int timeout_ms)
 {
-    fd_set fds;
-    int width;
+    fd_set write_fds;
+    FD_ZERO(&write_fds);
+    FD_SET(handle, &write_fds);
 
-    FD_ZERO(&fds);
-    FD_SET(handle, &fds);
-    width = handle + 1;
+    timeval timeout = {};
+    timeval *timeout_ptr = nullptr;
 
-    timeval time = {};
-    time.tv_sec = static_cast<time_t>(timeout_ms / 1000);
-    time.tv_usec = 0;
+    if (timeout_ms > 0)
+    {
+        timeout.tv_sec = timeout_ms / 1000;
+        timeout.tv_usec = (timeout_ms % 1000) * 1000;
+        timeout_ptr = &timeout;
+    }
 
-    return select(width, nullptr, &fds, nullptr, &time);
+    // Wait for write availability
+    const int result = select(handle + 1, nullptr, &write_fds, nullptr, timeout_ptr);
+
+    if (result < 0)
+    {
+        // Handle EINTR (interrupted system call)
+        if (errno == EINTR)
+        {
+            return 0; // Treat as timeout
+        }
+
+        return -1;
+    }
+
+    return result; // 1 if ready, 0 if timeout
 }
 
-Socket::Status SocketImpl::getErrorStatus()
+Socket::Status SocketImpl::getLastStatus()
 {
-    if ((errno == EAGAIN) || (errno == EINPROGRESS))
+    if (errno == EWOULDBLOCK)
         return Socket::Status::WouldBlock;
 
     switch (errno)
     {
-    case EWOULDBLOCK:
-        return Socket::Status::WouldBlock;
+    case EAGAIN:
+        return Socket::Status::Again;
+    case EINPROGRESS:
+        return Socket::Status::InProgress;
     case ECONNABORTED:
-        return Socket::Status::Disconnected;
+        return Socket::Status::ConnectionAborted;
     case ECONNRESET:
-        return Socket::Status::Disconnected;
+        return Socket::Status::ConnectionReset;
     case ETIMEDOUT:
-        return Socket::Status::Disconnected;
+        return Socket::Status::Timeout;
     case ENETRESET:
-        return Socket::Status::Disconnected;
+        return Socket::Status::NetworkReset;
     case ENOTCONN:
-        return Socket::Status::Disconnected;
+        return Socket::Status::NotConnected;
+    case ECONNREFUSED:
+        return Socket::Status::ConnectionRefused;
     case EPIPE:
-        return Socket::Status::Disconnected;
+        return Socket::Status::PipeError;
     default:
         return Socket::Status::Error;
     }
+}
+
+const char *SocketImpl::getLastError()
+{
+    return strerror(errno);
 }
 
 } // namespace sck::impl

@@ -4,6 +4,7 @@
 #include "sockets/Socket.hpp"
 #include "sockets/SocketImpl.hpp"
 
+#include <chrono>
 #include <optional>
 
 namespace sck

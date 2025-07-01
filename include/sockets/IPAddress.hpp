@@ -119,14 +119,14 @@ class IPAddress
      * @param other IPAddress to compare with
      * @return true if addresses are identical
      */
-    bool operator==(IPAddress other) const;
+    bool operator==(const IPAddress &other) const;
 
     /**
      * @brief Inequality comparison operator
      * @param other IPAddress to compare with
      * @return true if addresses are not identical
      */
-    bool operator!=(IPAddress other) const;
+    bool operator!=(const IPAddress &other) const;
 
     /// @name Static Methods
     /// @{
@@ -139,7 +139,7 @@ class IPAddress
      * - Direct IP address strings (e.g., "192.168.1.1")
      * - Hostnames (performs DNS lookup)
      */
-    static std::optional<Resolution> resolve(const std::string hostname);
+    static std::optional<Resolution> resolve(const std::string &hostname);
 
     /**
      * @brief Convert 32-bit address to string representation
@@ -154,12 +154,12 @@ class IPAddress
     std::string ipString;    ///< String representation of the address
 
     /**
-     * @brief Initialize internal variables
+     * @brief Clear internal variables
      *
      * Sets:
-     * - internetAddress to zero
-     * - ipString buffer to appropriate size
+     * - internetAddress to INADDR_NONE
+     * - ipString to INVALID
      */
-    void initVariables();
+    void clear();
 };
 } // namespace sck

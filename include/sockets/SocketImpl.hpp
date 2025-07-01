@@ -60,7 +60,7 @@ class SocketImpl
      * @param port The port number in host byte order
      * @return sockaddr_in Initialized address structure in network byte order
      */
-    static sockaddr_in createAddress(const uint32_t addr, const unsigned short port);
+    [[nodiscard]] static sockaddr_in createAddress(const uint32_t addr, const unsigned short port);
 
     /**
      * @brief Checks if a socket handle is valid
@@ -69,7 +69,7 @@ class SocketImpl
      * @return true if the handle is valid
      * @return false if the handle is invalid
      */
-    static bool isValidHandle(SocketHandle handle);
+    [[nodiscard]] static bool isValidHandle(SocketHandle handle);
 
     /**
      * @brief Closes a socket handle
@@ -89,9 +89,9 @@ class SocketImpl
      */
     static void setBlocking(SocketHandle handle, const bool blocking);
 
-    static int waitRead(SocketHandle handle, const unsigned int timeout_ms = 0);
+    [[nodiscard]] static int waitRead(SocketHandle handle, const unsigned int timeout_ms = 0);
 
-    static int waitWrite(SocketHandle handle, const unsigned int timeout_ms = 0);
+    [[nodiscard]] static int waitWrite(SocketHandle handle, const unsigned int timeout_ms = 0);
 
     /**
      * @brief Gets the status corresponding to the last socket error
@@ -100,6 +100,8 @@ class SocketImpl
      *         - Socket::Status::Done on success
      *         - Appropriate error status based on errno (Unix) or WSAGetLastError() (Windows)
      */
-    static Socket::Status getErrorStatus();
+    [[nodiscard]] static Socket::Status getLastStatus();
+
+    [[nodiscard]] static const char *getLastError();
 };
 } // namespace sck::impl
